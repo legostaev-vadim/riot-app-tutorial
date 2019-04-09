@@ -1,0 +1,2077 @@
+<h2 id="-riot-js">Простое приложение на Riot.js</h2>
+<p><img src="https://riot.js.org/img/logo/riot120x.png" alt="Riot"></p>
+<p>Онлайн пример приложения <a href="http://272758.playcode.io/#!/list">Riot Application</a></p>
+<p><a href="https://github.com/legostaev-vadim/riot-app-tutorial">Исходный код</a></p>
+<blockquote>
+<p>Данное руководство распространяется совершенно бесплатно и без каких-либо ограничений. Авторство остаётся за сайтом <a href="http://riot-js.ru/">riot-js.ru</a>.</p>
+</blockquote>
+<p><em>Давайте разработаем простое приложение, которое охватывает некоторые основные аспекты одностраничных приложений. Мы пройдём вес цикл разработки и в конечном итоге, создадим небольшое приложение использующее <a href="https://ru.wikipedia.org/wiki/REST">REST</a> API и реализующее все основные операции <a href="https://ru.wikipedia.org/wiki/CRUD">CRUD</a> (Создание, Чтение, Обновление и Удаление). Для работы мы будем использовать <a href="https://riot.js.org/">Riot.js</a> версии <strong>3.13.2</strong> (на момент написания руководства), <a href="https://webpack.js.org/">Webpack</a> последней версии и <a href="https://nodejs.org/en/">Node.js</a> должен быть у вас установлен. Кроме этого, вы должны иметь базовые знания по <strong>Riot.js</strong>, поэтому, если их у вас нет, прочитайте <a href="http://riot-js.ru/guide">Учебник</a> и изучите <a href="http://riot-js.ru/api">API</a>.</em></p>
+<h3 id="-">Содержание:</h3>
+<div id="toc">
+  <p><a href="#preparatory-work">Подготовительные работы</a></p>
+  <p><a href="#configuration-file-start">Создание файла конфигурации Webpack</a></p>
+  <p><a href="#create-component-hello">Создание компонента Hello</a></p>
+  <p><a href="#storage-module">Модуль хранения состояния</a></p>
+  <p><a href="#create-component-userlist">Создание компонента UserList</a></p>
+  <p><a href="#create-component-app">Создание компонента App</a></p>
+  <p><a href="#create-component-menu">Создание компонента Menu</a></p>
+  <p><a href="#create-component-header">Создание компонента Header</a></p>
+  <p><a href="#create-component-footer">Создание компонента Footer</a></p>
+  <p><a href="#configuration-file-end">Завершение файла конфигурации Webpack</a></p>
+  <p><a href="#create-component-userform">Создание компонента UserForm</a></p>
+  <p><a href="#add-routing">Добавляем маршрутизацию</a></p>
+</div>
+
+<br>
+
+<h3 id="preparatory-work">Подготовительные работы</h3>
+
+<p>Мы начнём с создания рабочей директории и точки входа для нашего приложения. Создайте папку с названием <strong>app</strong>, а в ней создайте файл <strong>index.html</strong>:</p>
+<pre><code class="language-html">&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+  &lt;meta charset=&quot;UTF-8&quot;&gt;
+  &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;
+  &lt;meta http-equiv=&quot;X-UA-Compatible&quot; content=&quot;ie=edge&quot;&gt;
+  &lt;title&gt;Riot Application&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;script src=&quot;dist/build.js&quot;&gt;&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+<blockquote>
+<p>Мы могли бы создать всё приложение в одном файле <strong>Javascript</strong>, но в дальнейшем, это затруднило бы навигацию по нашему коду. Вместо этого, давайте разделим код на модули и соберём эти модули в файл <strong>dist/build.js</strong>.</p>
+</blockquote>
+<p>Перейдите в наш рабочий каталог <strong>app</strong>, затем откройте терминал командной строки, перейдите в эту папку в терминале и введите команду:</p>
+<pre><code>npm init -y</code></pre><blockquote>
+<p>Не забывайте в терминале переходить в папку <strong>app</strong>! Терминал должен ссылаться на неё при вводе всех команд.</p>
+</blockquote>
+<p>Она создаст файл <strong>package.json</strong>, который содержит описание нашего проекта и управляет его зависимостями. Если вы всё сделали правильно, то вот так сейчас выглядит этот файл:</p>
+<pre><code class="language-js">{
+  &quot;name&quot;: &quot;app&quot;,
+  &quot;version&quot;: &quot;1.0.0&quot;,
+  &quot;description&quot;: &quot;&quot;,
+  &quot;main&quot;: &quot;index.js&quot;,
+  &quot;scripts&quot;: {
+    &quot;test&quot;: &quot;echo \&quot;Error: no test specified\&quot; &amp;&amp; exit 1&quot;
+  },
+  &quot;keywords&quot;: [],
+  &quot;author&quot;: &quot;&quot;,
+  &quot;license&quot;: &quot;ISC&quot;
+}</code></pre>
+<p>Давайте заменим в этом файле содержимое секции <strong>scripts</strong>, и вместо:</p>
+<pre><code class="language-js">&quot;test&quot;: &quot;echo \&quot;Error: no test specified\&quot; &amp;&amp; exit 1&quot;</code></pre>
+<p>пропишем:</p>
+<pre><code class="language-js">&quot;dev&quot;: &quot;webpack-dev-server -d --open&quot;,
+&quot;build&quot;: &quot;webpack -p&quot;</code></pre>
+<p>Теперь наш файл должен выглядеть так:</p>
+<pre><code class="language-js">{
+  &quot;name&quot;: &quot;app&quot;,
+  &quot;version&quot;: &quot;1.0.0&quot;,
+  &quot;description&quot;: &quot;&quot;,
+  &quot;main&quot;: &quot;index.js&quot;,
+  &quot;scripts&quot;: {
+    &quot;dev&quot;: &quot;webpack-dev-server -d --open&quot;,
+    &quot;build&quot;: &quot;webpack -p&quot;
+  },
+  &quot;keywords&quot;: [],
+  &quot;author&quot;: &quot;&quot;,
+  &quot;license&quot;: &quot;ISC&quot;
+}</code></pre>
+<p>Команда <strong>dev</strong> будет отвечать за запуск <strong>Webpack</strong> в режиме разработки, а команда <strong>build</strong> используется для продакшена. На этом, наши ручные манипуляции с файлом <strong>package.json</strong> можно считать законченными.</p>
+<p>Для нашей задачи нам потребуется установить несколько пакетов. Сначала установим пакеты необходимые для разработки. Введите в терминале:</p>
+<pre><code>npm i -D webpack webpack-cli webpack-dev-server</code></pre><p>Затем, установим пакеты для самого приложения:</p>
+<pre><code>npm i -S riot@3.13.2 riot-route</code></pre><p>Таким образом, наш файл <strong>package.json</strong> получит следующее содержимое:</p>
+<pre><code class="language-js">{
+  &quot;name&quot;: &quot;app&quot;,
+  &quot;version&quot;: &quot;1.0.0&quot;,
+  &quot;description&quot;: &quot;&quot;,
+  &quot;main&quot;: &quot;index.js&quot;,
+  &quot;scripts&quot;: {
+    &quot;dev&quot;: &quot;webpack-dev-server -d --open&quot;,
+    &quot;build&quot;: &quot;webpack -p&quot;
+  },
+  &quot;keywords&quot;: [],
+  &quot;author&quot;: &quot;&quot;,
+  &quot;license&quot;: &quot;ISC&quot;,
+  &quot;devDependencies&quot;: {
+    &quot;webpack&quot;: &quot;^4.29.6&quot;,
+    &quot;webpack-cli&quot;: &quot;^3.3.0&quot;,
+    &quot;webpack-dev-server&quot;: &quot;^3.2.1&quot;
+  },
+  &quot;dependencies&quot;: {
+    &quot;riot&quot;: &quot;^3.13.2&quot;,
+    &quot;riot-route&quot;: &quot;^3.1.4&quot;
+  }
+}</code></pre>
+<p>Создадим в нашей папке <strong>app</strong> подпапку <strong>src</strong>, а в неё добавим ещё три папки:</p>
+<pre><code class="language-js">assets, models и views </code></pre>
+<p>Структура нашего проекта примет следующий вид:</p>
+<pre><code class="language-js">app/
+    node_modules/
+    src/
+        assets/
+        models/
+        views/
+    index.html
+    package.json</code></pre>
+<blockquote>
+<p>Мы не создавали папку <strong>node_modules</strong>, она была создана <strong>npm</strong> (менеджер пакетов Node.js) автоматически, во время установки пакетов.</p>
+</blockquote>
+<p>На этом, подготовительные работы для нашего проекта окончены. Следующим шагом будет создание файла конфигурации для <strong>Webpack</strong> и пробный запуск приложения.</p>
+<h3 id="configuration-file-start">Создание файла конфигурации Webpack</h3>
+
+<p>В нашей папке <strong>app</strong> создайте файл <strong>webpack.config.js</strong> и введите в него следующий код:</p>
+<pre><code class="language-js">const path = require(&#39;path&#39;)
+
+module.exports = {
+  entry: &#39;./src/App.js&#39;,
+  output: {
+    path: path.resolve(__dirname, &#39;dist&#39;),
+    filename: &#39;build.js&#39;,
+    publicPath: &#39;dist/&#39;
+  }
+}</code></pre>
+<p>Точкой входа приложения будет файл <strong>App.js</strong>, расположенный в папке <strong>src</strong>, а выводить наш код мы будем в файл <strong>build.js</strong>, расположеный в папке <strong>dist</strong>.</p>
+<p>Создайте в папке <strong>src</strong> файл <strong>App.js</strong> и введите в него:</p>
+<pre><code class="language-js">console.log(&#39;Hello Riot!&#39;)</code></pre>
+<p>К этому моменту, структура нашего проекта имеет следующий вид:</p>
+<pre><code class="language-js">app/
+    node_modules/
+    src/
+        assets/
+        models/
+        views/
+        App.js
+    index.html
+    package.json
+    webpack.config.js</code></pre>
+<p>Сохраните файл и запустите терминал из папки <strong>app</strong>. В терминале введите команду:</p>
+<pre><code>npm run dev</code></pre><p>После этого откроется страница в браузере, соответствующая файлу <strong>index.html</strong>. Перейдите в консоль браузера, там вы должны увидеть приветственное сообщение:</p>
+<pre><code class="language-js">&gt; Hello Riot!</code></pre>
+<p>Закройте файл <strong>webpack.config.js</strong> и перейдите в папку <strong>views</strong>, где мы создадим наш первый компонент <strong>Hello</strong>, который будет выводить приветственное сообщение на странице.</p>
+<h3 id="create-component-hello">Создание компонента Hello</h3>
+
+<blockquote>
+<p>Постарайтесь найти для своего редактора расширение, поддерживающие синтаксис <strong>riot</strong> в файлах <strong>.tag</strong>. Это сильно облегчит вам работу в дальнешей. Для редактора <a href="https://code.visualstudio.com/">Visual Studio Code</a>, такое <a href="https://github.com/crisward/riot-tag">дополнение</a> имеется.</p>
+</blockquote>
+<p>В папке <strong>views</strong> создайте файл <strong>Hello.tag</strong>. В данном файле будет распологаться наш компонент, который мы назовем <strong>r-hello</strong>.</p>
+<blockquote>
+<p>Все компоненты мы будем хранить в этой папке, поскольку они являются <strong>представлениями</strong> в терминологии <strong>Riot.js</strong>.</p>
+</blockquote>
+<p>Префикс <strong>r-</strong> не является обязательным в названии тега компонента. Этим действием, мы лишь показываем его принадлежность к пользовательским тегам <strong>riot</strong> и, одновременно, избегаем пересечения в пространстве имён со стандартными <strong>html-элементами</strong>, наподобие <strong>header</strong>. Например, если бы нам потребовался компонент <strong>header</strong>, то мы назвали бы его <strong>r-header</strong>.</p>
+<p>В файле <strong>Hello.tag</strong> введите:</p>
+<pre><code class="language-html">&lt;r-hello&gt;
+  &lt;h1&gt;Hello Riot!&lt;/h1&gt;
+&lt;/r-hello&gt;</code></pre>
+<p>Затем, откройте файл <strong>App.js</strong>, удалите приветствие и подключите наш компонент к приложению:</p>
+<pre><code class="language-js">// подключаем компонент Hello
+import &#39;./views/Hello.tag&#39;</code></pre>
+<p>Точка в начале названия пути <strong>&#39;./views/Hello.tag&#39;</strong> компонента, определяет относительный путь к нему от файла <strong>App.js</strong>.</p>
+<blockquote>
+<p>Нам <strong>не требуется</strong> импортировать наш компонент в переменную, вида:</p>
+</blockquote>
+<pre><code class="language-js">import Hello from &#39;./views/Hello.tag&#39;</code></pre>
+<blockquote>
+<p>Поскольку файлы компонентов <strong>не содержат</strong> никакого экспорта, мы импортируем их содержимое прямо в файл нашего приложения.</p>
+</blockquote>
+<p>Если мы сейчас попытаемся запустить <strong>Webpack</strong> командой:</p>
+<pre><code>npm run dev</code></pre><p>то неизбежно получим сообщение об ошибке синтаксического разбора:</p>
+<pre><code>ERROR in ./src/views/Hello.tag 1:0
+Module parse failed: Unexpected token (1:0)
+You may need an appropriate loader to handle this file type.
+&gt; &lt;r-hello&gt;
+|   &lt;h1&gt;Hello Riot!&lt;/h1&gt;
+| &lt;/r-hello&gt;
+ @ ./src/App.js 2:0-26
+ @ multi (webpack)-dev-server/client?http://localhost:8080 ./src/App.js</code></pre><p>Из которого можно сделать вывод, что нам потребуется установить соответствующий <strong>загрузчик Webpack</strong>.</p>
+<blockquote>
+<p>Несмотря на ошибку, <strong>Webpack</strong> не завершает своё выполнение в терминале. Остановить его работу можно командой <strong>Ctrl+C</strong></p>
+</blockquote>
+<p>Мы будем использовать загрузчик <a href="https://www.npmjs.com/package/riot-tag-new-loader">riot-tag-new-loader</a>.</p>
+<p>Откройте терминал из папки <strong>app</strong> или переведите терминал в неё другим способом, и введите команду:</p>
+<pre><code>npm i -D riot-tag-new-loader</code></pre><blockquote>
+<p>Флаг <strong>-D</strong> указывает на зависимость <strong>devDependencies</strong>, которая используется для процесса разработки, а флаг <strong>-S</strong> на <strong>dependencies</strong>, в которой указываются пакеты, используемые для работы самого приложения.</p>
+</blockquote>
+<p>Наш файл <strong>package.json</strong> теперь выглядит так:</p>
+<pre><code class="language-js">{
+  &quot;name&quot;: &quot;app&quot;,
+  &quot;version&quot;: &quot;1.0.0&quot;,
+  &quot;description&quot;: &quot;&quot;,
+  &quot;main&quot;: &quot;index.js&quot;,
+  &quot;scripts&quot;: {
+    &quot;dev&quot;: &quot;webpack-dev-server -d --open&quot;,
+    &quot;build&quot;: &quot;webpack -p&quot;
+  },
+  &quot;keywords&quot;: [],
+  &quot;author&quot;: &quot;&quot;,
+  &quot;license&quot;: &quot;ISC&quot;,
+  &quot;devDependencies&quot;: {
+    &quot;riot-tag-new-loader&quot;: &quot;^1.0.14&quot;,
+    &quot;webpack&quot;: &quot;^4.29.6&quot;,
+    &quot;webpack-cli&quot;: &quot;^3.3.0&quot;,
+    &quot;webpack-dev-server&quot;: &quot;^3.2.1&quot;
+  },
+  &quot;dependencies&quot;: {
+    &quot;riot&quot;: &quot;^3.13.2&quot;,
+    &quot;riot-route&quot;: &quot;^3.1.4&quot;
+  }
+}</code></pre>
+<p>Простая установка загрузчика, не избавит нас о вышеуказанной проблемы. Нам нужно будет добавить соответствующие <strong>правила</strong> в файле <strong>webpack.config.js</strong>.</p>
+<p>Откроем файл <strong>webpack.config.js</strong> и добавим новое правило в массив <strong>rules</strong> объекта <strong>module</strong>:</p>
+<pre><code class="language-js">const path = require(&#39;path&#39;)
+
+module.exports = {
+  entry: &#39;./src/App.js&#39;,
+  output: {
+    path: path.resolve(__dirname, &#39;dist&#39;),
+    filename: &#39;build.js&#39;,
+    publicPath: &#39;dist/&#39;
+  },
+  module: {
+    rules: [
+      // добавляем новое правило для файлов компонентов (.tag)
+      {
+        test: /\.tag$/,
+        exclude: /(node_modules|bower_components)/,
+        use: &#39;riot-tag-new-loader&#39;
+      }
+    ]
+  }
+}</code></pre>
+<p>Если мы сейчас снова попытаемся запустить <strong>Webpack</strong>:</p>
+<pre><code>npm run dev</code></pre><p>то ошибка исчезнет, но ничего интересного, кроме пустой страницы в браузере, мы не увидим.</p>
+<blockquote>
+<p>Загрузчик лишь компилирует содержимое файлов компонентов в обычный <strong>JavaScript</strong>, который <strong>Webpack</strong> затем подключает к нашему приложению.</p>
+</blockquote>
+<p>Нам потребуется выполнить три завершающих действия:</p>
+<ul>
+<li>подключить <strong>Riot.js</strong> к нашему приложению</li>
+<li>передать <strong>Riot.js</strong> тег <strong>Hello</strong> для монтирования</li>
+<li>подключить тег к странице <strong>index.html</strong></li>
+</ul>
+<p>Откроем файл <strong>App.js</strong> и в самом его верху, <strong>перед</strong> подключением компонента, добавим команду импорта:</p>
+<pre><code class="language-js">import riot from &#39;riot&#39;</code></pre>
+<p>а в конце файла, <strong>после</strong> подключением компонента, команду монтирования:</p>
+<pre><code class="language-js">riot.mount(&#39;r-hello&#39;)</code></pre>
+<p>Теперь наш файл <strong>App.js</strong> должен выглядеть так:</p>
+<pre><code class="language-js">// подключаем Riot.js
+import riot from &#39;riot&#39;
+
+// подключаем компонент Hello
+import &#39;./views/Hello.tag&#39;
+
+// монтируем компонент Hello
+riot.mount(&#39;r-hello&#39;)</code></pre>
+<p>Мы передаём в <strong>Riot.js</strong> название компонента так, как мы указали его в файле <strong>Hello.tag</strong>, т.е. <strong>r-hello</strong>. Это же название мы будем использовать и при подключении компонента к странице, а <strong>Hello.tag</strong> - это просто название файла, в котором хранится наш компонент.</p>
+<p>Откроем файл <strong>index.html</strong> и подключим компонент к странице:</p>
+<pre><code class="language-html">&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+  &lt;meta charset=&quot;UTF-8&quot;&gt;
+  &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;
+  &lt;meta http-equiv=&quot;X-UA-Compatible&quot; content=&quot;ie=edge&quot;&gt;
+  &lt;title&gt;Riot Application&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+
+  &lt;!-- подключаем компонент Hello к странице --&gt;
+  &lt;r-hello /&gt;
+
+  &lt;script src=&quot;dist/build.js&quot;&gt;&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+<p>И вот теперь, мы снова можем перезапустить <strong>Webpack</strong>:</p>
+<pre><code>npm run dev</code></pre><p>после чего, откроется наша страница в браузере с приветственным сообщением:</p>
+<h1 id="hello-riot-">Hello Riot!</h1>
+<p>Мы можем менять наше сообщение в компоненте <strong>Hello</strong>, и браузер автоматически будет обновлять страницу.</p>
+<p>Это достигается благодаря тому, что мы в самом начале установили <strong>webpack-dev-server</strong>, а за само открытие страницы в браузере, отвечает его флаг <strong>--open</strong> команды <strong>dev</strong> в секции <strong>scripts</strong> файла <strong>package.json</strong></p>
+<pre><code class="language-js">&quot;scripts&quot;: {
+  &quot;dev&quot;: &quot;webpack-dev-server -d --open&quot;,
+  &quot;build&quot;: &quot;webpack -p&quot;
+}</code></pre>
+<p>Мы закончили с ознакомительной частью данного руководства и, уже в следующей, перейдём непосредственно к написанию нашего приложения. И начнём мы с создания модуля для хранения его состояния.</p>
+<h3 id="storage-module">Модуль хранения состояния</h3>
+
+<p>В папке <strong>models</strong> создайте файл <strong>User.js</strong>. Наше состояние будет храниться в экземпляре класса <strong>User</strong>. Давайте создадим этот класс, который будет иметь два свойства для хранения данных:</p>
+<pre><code class="language-js">export default class User {
+
+  constructor() {
+    this.list = []
+    this.current = {}
+  }
+
+}</code></pre>
+<ul>
+<li>свойство <strong>list</strong> - это список пользователей</li>
+<li>свойство <strong>current</strong> - это текущий пользователь</li>
+</ul>
+<blockquote>
+<p>Заметьте, что мы используем <strong>экспорт по умолчанию</strong> для нашего класса. Это обычная практика при работе с модулями, содержащими один единственный класс для экспорта, что не отменяет одновременно и <strong>именованный экспорт</strong>, если в этом возникнет такая необходимость.</p>
+</blockquote>
+<p>Теперь давайте добавим код для загрузки некоторых данных с сервера. Для связи с сервером мы будем использовать <a href="https://developer.mozilla.org/ru/docs/Web/API/Fetch_API/Using_Fetch">Fetch</a> API, который является <a href="https://developer.mozilla.org/ru/docs/Web/API/XMLHttpRequest">XMLHttpRequest</a> нового поколения.</p>
+<p>Создайте метод <strong>getUsers</strong>, который будет запускать вызов <strong>XHR</strong> и получать список пользователей с сервера:</p>
+<pre><code class="language-js">export default class User {
+
+  constructor() {
+    this.list = []
+    this.current = {}
+  }
+
+  // получаем список пользователей с сервера
+  getUsers() {
+
+  }
+
+}</code></pre>
+<blockquote>
+<p>В этом руководстве, мы будем делать вызовы <strong>XHR</strong> для <a href="http://rem-rest-api.herokuapp.com/">REM</a> API, который является фиктивным <a href="https://ru.wikipedia.org/wiki/REST">REST</a> API для быстрого создания прототипов. Этот <strong>API</strong> возвращает список пользователей из конечной точки.</p>
+</blockquote>
+<p>Используя <strong>fetch</strong>, выполним <strong>XHR</strong>-запрос и заполним наш список <strong>list</strong> данными из конечной точки:</p>
+<pre><code class="language-js">export default class User {
+
+  constructor() {
+    this.list = []
+    this.current = {}
+  }
+
+  // получаем список пользователей с сервера
+  getUsers() {
+    fetch(&#39;https://rem-rest-api.herokuapp.com/api/users&#39;, {
+      method: &#39;GET&#39;,
+      credentials: &#39;include&#39;
+    })
+      .then(response =&gt; response.json())
+      .then(result =&gt; {
+        this.list = result.data
+      })
+  }
+
+}</code></pre>
+<ul>
+<li>свойство <strong>method</strong> - это метод <a href="https://ru.wikipedia.org/wiki/HTTP">HTTP</a></li>
+<li>свойство <strong>credentials</strong> - отвечает за <a href="https://ru.wikipedia.org/wiki/Cookie">Cookie</a></li>
+</ul>
+<p>В первом аргументе <strong>fetch</strong> передаётся <strong>url</strong> адрес для конечной точки <strong>API</strong>, второй аргумент представляет собой объект с параметрами запроса. В свойстве <strong>method</strong> этого объекта пишем <strong>GET</strong>, а для свойства <strong>credentials</strong> задаём значение <strong>include</strong>, которое указывает на то, что мы используем <strong>куки</strong>, поскольку это является обязательным требованием для <a href="http://rem-rest-api.herokuapp.com/">REM</a> API.</p>
+<p>Вызов <strong>fetch</strong> возвращает <strong>промис</strong>, который, когда ответ будет получен, выполняет функции обратного вызова с объектом <a href="https://developer.mozilla.org/ru/docs/Web/API/Response">Response</a> или с ошибкой, если запрос не удался. Объект <strong>response</strong> предоставляет методы, позволяющие прочитать тело ответа в необходимом нам формате. В нашем случае, сервер возвращает нам ответ в формате <strong>JSON</strong>, который, с помощью метода <strong>json()</strong> объекта <strong>response</strong> в первом вызове <strong>.then</strong>, преобразуется в объект <strong>JavaScript</strong> и возвращается промис. Следующий <strong>.then</strong> присваивает полученные данные, которые представляют собой массив объектов <strong>JavaScript</strong>, свойству <strong>list</strong> нашего экземпляра класса <strong>User</strong>.</p>
+<p>Теперь мы создадим компонет <strong>UserList</strong>, который является представлением и служит для отображения данных из нашего модуля состояния.</p>
+<h3 id="create-component-userlist">Создание компонента UserList</h3>
+
+<p>Из папки <strong>views</strong>  удалите файл <strong>Hello.tag</strong>, поскольку компонент <strong>Hello</strong> нам больше не нужен. Удалите и его подключение из файлов <strong>App.js</strong> и <strong>index.html</strong>. Вот так теперь они должны у вас выглядеть:</p>
+<p><strong>App.js</strong></p>
+<pre><code class="language-js">// подключаем Riot.js
+import riot from &#39;riot&#39;</code></pre>
+<p><strong>index.html</strong></p>
+<pre><code class="language-html">&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+  &lt;meta charset=&quot;UTF-8&quot;&gt;
+  &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;
+  &lt;meta http-equiv=&quot;X-UA-Compatible&quot; content=&quot;ie=edge&quot;&gt;
+  &lt;title&gt;Riot Application&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;script src=&quot;build.js&quot;&gt;&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+<p>В папке <strong>views</strong> создайте файл <strong>UserList.tag</strong></p>
+<pre><code class="language-html">&lt;r-list&gt;
+
+  &lt;div class=&quot;list&quot;&gt;
+
+  &lt;/div&gt;
+
+&lt;/r-list&gt;</code></pre>
+<p>Наш компонент пока содержит только шаблон, в виде пустого списка с классом <strong>list</strong>. Стили и логику мы добавим позже. Теперь давайте обратимся к списку пользователей из модели, которую мы создали ранее, чтобы динамически пройти по всем данным.</p>
+<p>Добавьте в компонент <strong>UserList</strong> ссылки на пользователей:</p>
+<pre><code class="language-html">&lt;r-list&gt;
+
+  &lt;div class=&quot;list&quot;&gt;
+
+    &lt;!-- добавляем ссылки на пользователей --&gt;
+    &lt;a href=&quot;#!/edit/{ id }&quot; class=&quot;list__item&quot; each={ list } key={ id }&gt;{ firstName } { lastName }&lt;/a&gt;
+
+  &lt;/div&gt;
+
+&lt;/r-list&gt;</code></pre>
+<p>В ссылке имеется атрибут <strong>each</strong>, который отвечает за реализацию циклов в <strong>Riot.js</strong>. Он получает свойство <strong>list</strong> объекта компонента, которое, впоследствии, будет ссылаться на одноимённое свойство экземпляра объекта класса <strong>User</strong>, и представляет из себя массив объектов получаемых от сервера. Каждый объект в этом массиве содержит свойства: <strong>id</strong>, <strong>firstName</strong> и <strong>lastName</strong>. В приведённом выше примере, мы просто выводим содержимое этих свойст в ссылку для каждого пользователя.</p>
+<blockquote>
+<p>Выражения в <strong>Riot.js</strong> заключаются в одинарные фигурные скобки и могут распологаться как в атрибутах тегов, так и представлять их содержимое находясь между ними. Кавычки в атрибутах не являются обязательными.</p>
+</blockquote>
+<p>Вот как выглядит <a href="https://ru.wikipedia.org/wiki/JSON">JSON</a>-файл получаемый с сервера:</p>
+<pre><code class="language-js">{
+  &quot;data&quot;: [
+    {
+      &quot;id&quot;: 1,
+      &quot;firstName&quot;: &quot;Peter&quot;,
+      &quot;lastName&quot;: &quot;Mackenzie&quot;
+    },
+    {
+      &quot;id&quot;: 2,
+      &quot;firstName&quot;: &quot;Cindy&quot;,
+      &quot;lastName&quot;: &quot;Zhang&quot;
+    },
+    {
+      &quot;id&quot;: 3,
+      &quot;firstName&quot;: &quot;Ted&quot;,
+      &quot;lastName&quot;: &quot;Smith&quot;
+    },
+    {
+      &quot;id&quot;: 4,
+      &quot;firstName&quot;: &quot;Susan&quot;,
+      &quot;lastName&quot;: &quot;Fernbrook&quot;
+    },
+    {
+      &quot;id&quot;: 5,
+      &quot;firstName&quot;: &quot;Emily&quot;,
+      &quot;lastName&quot;: &quot;Kim&quot;
+    },
+    {
+      &quot;id&quot;: 6,
+      &quot;firstName&quot;: &quot;Peter&quot;,
+      &quot;lastName&quot;: &quot;Zhang&quot;
+    },
+    {
+      &quot;id&quot;: 7,
+      &quot;firstName&quot;: &quot;Cindy&quot;,
+      &quot;lastName&quot;: &quot;Smith&quot;
+    },
+    {
+      &quot;id&quot;: 8,
+      &quot;firstName&quot;: &quot;Ted&quot;,
+      &quot;lastName&quot;: &quot;Fernbrook&quot;
+    },
+    {
+      &quot;id&quot;: 9,
+      &quot;firstName&quot;: &quot;Susan&quot;,
+      &quot;lastName&quot;: &quot;Kim&quot;
+    },
+    {
+      &quot;id&quot;: 10,
+      &quot;firstName&quot;: &quot;Emily&quot;,
+      &quot;lastName&quot;: &quot;Mackenzie&quot;
+    }
+  ],
+  &quot;offset&quot;: 0,
+  &quot;limit&quot;: 10,
+  &quot;total&quot;: 25
+}</code></pre>
+<p>В объекте нашей модели данных класса <strong>User</strong>, мы определили свойство <strong>list</strong>, которое является массивом и будет хранить содержимое свойства <strong>data</strong>, возвращаемого с сервера файла <strong>JSON</strong>. Последние три свойства в этом файле: <strong>offset</strong>, <strong>limit</strong> и <strong>total</strong> используются исключительно для уточнения запросов. Мы воспользуемся свойством <strong>limit</strong> позже, для указания количества выводимых пользователей. По умолчанию оно равно 10.</p>
+<p>Добавим немного стилей в наш компонент. Стили в компоненте размещаются между стандартными тегами <strong>style</strong>:</p>
+<pre><code class="language-html">&lt;r-list&gt;
+
+  &lt;div class=&quot;list&quot;&gt;
+
+    &lt;!-- добавляем ссылки на пользователей --&gt;
+    &lt;a href=&quot;#!/edit/{ id }&quot; class=&quot;list__item&quot; each={ list } key={ id }&gt;{ firstName } { lastName }&lt;/a&gt;
+
+  &lt;/div&gt;
+
+  &lt;!--  добавляем стили  --&gt;
+  &lt;style&gt;
+    .list {
+      list-style: none;
+      margin: 0 0 10px;
+      padding: 0;
+    }
+    .list__item {
+      background: #fafafa;
+      border: 1px solid #ddd;
+      color: #333;
+      display: block;
+      margin: 0 0 1px;
+      padding: 8px 15px;
+      text-decoration: none;
+    }
+    .list__item:hover {
+      text-decoration: underline;
+    }
+  &lt;/style&gt;
+
+&lt;/r-list&gt;</code></pre>
+<blockquote>
+<p>Файл компонента представляет из себя обычный <strong>HTML</strong>, но с некоторыми усовершенствованиями, засчет возможностей <strong>Riot.js</strong>.</p>
+</blockquote>
+<p>Последнее, что нам осталось сделать, это определить логику нашего компонента. Её можно разместить как между тегами <strong>script</strong>, так и просто в теле компонента. Мы будем использовать первый вариант.</p>
+<p>Итак, нам нужно получить список пользователей с сервера и вывести их в нашем компоненте. Т.е. нам нужно вызвать метод <strong>getUsers</strong> экземплара класса <strong>User</strong>. Этот метод заполнит массив <strong>list</strong> данного класса полученными данными от сервера, а уже потом, мы сможем на него сослаться из нашего компонента и прогнать в цикле.</p>
+<p>Для подобных целей, <strong>Riot.js</strong> предоставляет <strong>примеси</strong> и <strong>наблюдателя</strong>. Наблюдатель позволяет отслеживать события и выполнять соответствующие действия при их наступлении, а примеси расширяют функциональность нашего компонента, добавляя в него возможность эти события ловить и правильно на нах реагировать.</p>
+<p>Давайте сделаем нашу модель данных наблюдаемой. Откройте файл <strong>User.js</strong> и в конструктор класса <strong>User</strong> добавьте параметр <strong>riot</strong>, через который мы будем ссылаться на библиотеку <strong>Riot.js</strong>, а в конце этого конструктора добавьте команду подключения наблюдателя:</p>
+<pre><code class="language-js">riot.observable(this)</code></pre>
+<p>Эта команда делает <strong>наблюдаемым</strong>, каждый возвращаемый экземпляр объекта класса <strong>User</strong>:</p>
+<pre><code class="language-js">constructor(riot) {
+  this.list = []
+  this.current = {}
+  // делаем объект модели данных наблюдаемым
+  riot.observable(this)
+}</code></pre>
+<p>Теперь наш модуль хранения состояния выглядит так:</p>
+<pre><code class="language-js">export default class User {
+
+  constructor(riot) {
+    this.list = []
+    this.current = {}
+    // делаем объект модели данных наблюдаемым
+    riot.observable(this)
+  }
+
+  // получаем список пользователей с сервера
+  getUsers() {
+    fetch(&#39;https://rem-rest-api.herokuapp.com/api/users&#39;, {
+      method: &#39;GET&#39;,
+      credentials: &#39;include&#39;
+    })
+      .then(response =&gt; response.json())
+      .then(result =&gt; {
+        this.list = result.data
+      })
+  }
+
+}</code></pre>
+<p>Наш объект модели данных теперь сможет запускать события, но в этом не будет никакого смысла, поскольку обработчики этих событий должны распологаться в компонентах, а они, попросту пока не могут контактировать с нашим наблюдателем. И для этого, в <strong>Riot.js</strong> предусмотрены <strong>примеси</strong>, которые позволяют расширить функциональность наблюдателя нашей модели данных на любые компонеты.</p>
+<p>Откройте главный файл приложения <strong>App.js</strong>. Давайте создадим примесь <strong>user</strong>, которая будет ссылаться на экземпляр наблюдаемой модели данных класса <strong>User</strong>:</p>
+<pre><code class="language-js">// подключаем Riot.js
+import riot from &#39;riot&#39;
+
+// подключаем модель данных User
+import User from &#39;./models/User&#39;
+
+// создаём общую примесь user и передаём в конструктор модели данных User
+// ссылку на библиотеку Riot.js, в виде аргумента riot
+riot.mixin({ user: new User(riot) })</code></pre>
+<blockquote>
+<p>Обратите внимание, что во время создания примеси <strong>user</strong>, мы передали в наш класс <strong>ссылку</strong> на библиотеку <strong>Riot.js</strong>, через аргумент <strong>riot</strong> класса <strong>User</strong>, которая будет доступна через одноимённый параметр данного класса. Также заметьте, что перед этим, мы подключили <strong>модель данных</strong> в приложение.</p>
+</blockquote>
+<p>Осталось научить наши компоненты реагировать на события, которые будет генерировать наша модель данных, после успешного получения данных от сервера. Но прежде, давайте на минуту вернёмся в модуль нашей модели данных и научим нашу модель запускать эти самые события, после успешного ответа сервера.</p>
+<p>Откройте файл <strong>User.js</strong> и в функции <strong>getUsers</strong>, в конце последнего <strong>.then</strong>, добавьте команду:</p>
+<pre><code class="language-js">this.trigger(&#39;updated&#39;)</code></pre>
+<p>Она будет следовать сразу, после присвоения данных ответа сервера свойству <strong>list</strong>, нашей модели данных класса <strong>User</strong>:</p>
+<pre><code class="language-js">.then(result =&gt; {
+  // присваиваем результат ответа сервера свойству list модели данных
+  this.list = result.data
+  // запускаем событие updated, после успешного получения данных от сервера
+  this.trigger(&#39;updated&#39;)
+})</code></pre>
+<p>Полный код модуля хранения состояния должен выглядеть так:</p>
+<pre><code class="language-js">export default class User {
+
+  constructor(riot) {
+    this.list = []
+    this.current = {}
+    // делаем объект модели данных наблюдаемым
+    riot.observable(this)
+  }
+
+  // получаем список пользователей с сервера
+  getUsers() {
+    fetch(&#39;https://rem-rest-api.herokuapp.com/api/users&#39;, {
+      method: &#39;GET&#39;,
+      credentials: &#39;include&#39;
+    })
+      .then(response =&gt; response.json())
+      .then(result =&gt; {
+        // присваиваем результат ответа сервера свойству list модели данных
+        this.list = result.data
+        // запускаем событие updated, после успешного получения данных от сервера
+        this.trigger(&#39;updated&#39;)
+      })
+  }
+
+}</code></pre>
+<p>Закончим с компонентом <strong>UserList</strong>. Откройте файл <strong>UserList.tag</strong>, добавьте в конце тела компонента теги <strong>script</strong>, и введите следующий код:</p>
+<pre><code class="language-html">&lt;script&gt;
+
+  // запускаем метод getUsers, нашей модели данных
+  this.user.getUsers()
+
+&lt;/script&gt;</code></pre>
+<p>Поскольку мы расширили экземпляр модели данных класса <strong>User</strong> для любых компонентов с помощью примеси <strong>user</strong>, мы можем ссылаться на этот экземпляр данных, через одноимённое свойство самого <strong>объекта компонента</strong>, на которое указывает ключевое слово <strong>this</strong>.</p>
+<p>Данный код будет выполнен до монтирования тега на страницу. Он запускает метод <strong>getUsers</strong> нашей модели данных, который, внутри себя, запускает <strong>fetch</strong>, который выполняется асинхронно, и после загрузки данных с сервера, вызывает событие <strong>updated</strong>.</p>
+<p>Теперь нам нужно отловить это событие модели данных в нашем компоненте и запустить событие <strong>update</strong> самого компонента:</p>
+<pre><code class="language-html">&lt;script&gt;
+
+  // запускаем метод getUsers, нашей модели данных
+  this.user.getUsers()
+
+  // запускаем событие обновления компонента (this.update)
+  // при получении события updated от модели данных
+  this.user.one(&#39;updated&#39;, this.update)
+
+&lt;/script&gt;</code></pre>
+<p>В котором, в свою очередь, мы присваиваем свойству <strong>list</strong> объекта компонента значение, одноимённого свойства <strong>list</strong> нашей модели данных:</p>
+<pre><code class="language-html">&lt;script&gt;
+
+  // запускаем метод getUsers, нашей модели данных
+  this.user.getUsers()
+
+  // запускаем событие обновления компонента (this.update)
+  // при получении события updated от модели данных
+  this.user.one(&#39;updated&#39;, this.update)
+
+  // присваиваем свойству list нашего компонента значение
+  // полученное моделью данных при запуске её метода getUsers()
+  this.on(&#39;update&#39;, () =&gt; this.list = this.user.list)
+
+&lt;/script&gt;</code></pre>
+<p>после чего, компонет обновляется и полученные данные отображаются на странице.</p>
+<p>Итоговый код компонента <strong>UserList</strong>:</p>
+<pre><code class="language-html">&lt;r-list&gt;
+
+  &lt;div class=&quot;list&quot;&gt;
+
+    &lt;!-- добавляем ссылки на пользователей --&gt;
+    &lt;a href=&quot;#!/edit/{ id }&quot; class=&quot;list__item&quot; each={ list } key={ id }&gt;{ firstName } { lastName }&lt;/a&gt;
+
+  &lt;/div&gt;
+
+  &lt;!--  добавляем стили  --&gt;
+  &lt;style&gt;
+    .list {
+      list-style: none;
+      margin: 0 0 10px;
+      padding: 0;
+    }
+    .list__item {
+      background: #fafafa;
+      border: 1px solid #ddd;
+      color: #333;
+      display: block;
+      margin: 0 0 1px;
+      padding: 8px 15px;
+      text-decoration: none;
+    }
+    .list__item:hover {
+      text-decoration: underline;
+    }
+  &lt;/style&gt;
+
+  &lt;!--  добавляем логику  --&gt;
+  &lt;script&gt;
+
+    // запускаем метод getUsers, нашей модели данных
+    this.user.getUsers()
+
+    // запускаем событие обновления компонента (this.update)
+    // при получении события updated от модели данных
+    this.user.one(&#39;updated&#39;, this.update)
+
+    // присваиваем свойству list нашего компонента значение
+    // полученное моделью данных при запуске её метода getUsers()
+    this.on(&#39;update&#39;, () =&gt; this.list = this.user.list)
+
+  &lt;/script&gt;
+
+&lt;/r-list&gt;</code></pre>
+<p>Подключим компонент к приложению и примонтируем его в файле <strong>App.js</strong>:</p>
+<pre><code class="language-js">// подключаем Riot.js
+import riot from &#39;riot&#39;
+
+// подключаем модель данных User
+import User from &#39;./models/User&#39;
+
+// подключаем компонент UserList
+import &#39;./views/UserList.tag&#39;
+
+// создаём общую примесь user и передаём в конструктор модели данных User
+// ссылку на библиотеку Riot.js, в виде аргумента riot
+riot.mixin({ user: new User(riot) })
+
+// монтируем компонент UserList
+riot.mount(&#39;r-list&#39;)</code></pre>
+<p>а затем, подключим и к странице в файле <strong>index.html</strong>:</p>
+<pre><code class="language-html">&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+  &lt;meta charset=&quot;UTF-8&quot;&gt;
+  &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;
+  &lt;meta http-equiv=&quot;X-UA-Compatible&quot; content=&quot;ie=edge&quot;&gt;
+  &lt;title&gt;Riot Application&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+
+  &lt;!-- подключаем компонент UserList к странице --&gt;
+  &lt;r-list /&gt;
+
+  &lt;script src=&quot;dist/build.js&quot;&gt;&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+<p>Если мы теперь запустим из терминала команду:</p>
+<pre><code>npm run dev</code></pre><p>то, откроется страница браузера со списком из 10 пользователей:</p>
+<pre><code>Peter Mackenzie
+Cindy Zhang
+Ted Smith
+Susan Fernbrook
+Emily Kim
+Peter Zhang
+Cindy Smith
+Ted Fernbrook
+Susan Kim
+Emily Mackenzie</code></pre><p>Мы увеличим лимит пользователей позже, когда будем реализовывать операции <a href="https://ru.wikipedia.org/wiki/CRUD">CRUD</a> в другом компоненте, который мы тоже вскоре создадим.</p>
+<h3 id="create-component-app">Создание компонента App</h3>
+
+<p>Давайте изменим структуру нашего приложения и создадим входной компонент <strong>App</strong>. Данный компонент будет представлять точку входа нашего приложения для всех остальных компонентов.</p>
+<p>В папке <strong>views</strong> создайте файл <strong>App.tag</strong></p>
+<pre><code class="language-html">&lt;app&gt;
+
+&lt;/app&gt;</code></pre>
+<p>Это будет единственный компонент, в котором мы не будем использовать префикс <strong>r-</strong>, а подключать к странице мы будем его немного другим способом, через атрибут <strong>data-is</strong> html-элемента <strong>body</strong>.</p>
+<p>Откройте файл <strong>index.html</strong>, удалите подключение компонента <strong>UserList</strong> и добавьте атрибут <strong>data-is</strong> со значением <strong>app</strong>, к стандартному элементу <strong>body</strong>:</p>
+<pre><code class="language-html">&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+  &lt;meta charset=&quot;UTF-8&quot;&gt;
+  &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;
+  &lt;meta http-equiv=&quot;X-UA-Compatible&quot; content=&quot;ie=edge&quot;&gt;
+  &lt;title&gt;Riot Application&lt;/title&gt;
+&lt;/head&gt;
+&lt;body data-is=&quot;app&quot;&gt;
+  &lt;script src=&quot;dist/build.js&quot;&gt;&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+<p>Теперь вернёмся к нашему компоненту <strong>App</strong> и подключим в него компонент <strong>UserList</strong>:</p>
+<pre><code class="language-html">&lt;app&gt;
+
+  &lt;!--  подключаем компонент UserList  --&gt;
+  &lt;r-list /&gt;
+
+&lt;/app&gt;</code></pre>
+<p>Последние, что нам осталось, это подключить наш компонент к приложению в файле <strong>App.js</strong> и передать его <strong>Riot.js</strong> для монтирования, вместо компонента <strong>UserList</strong>:</p>
+<pre><code class="language-js">// подключаем компонент App
+import &#39;./views/App.tag&#39;
+
+// монтируем компонент App
+riot.mount(&#39;app&#39;)</code></pre>
+<p>А вот как должен выглядеть к этому моменту наш файл <strong>App.js</strong>:</p>
+<pre><code class="language-js">// подключаем Riot.js
+import riot from &#39;riot&#39;
+
+// подключаем модель данных User
+import User from &#39;./models/User&#39;
+
+// подключаем компонент UserList
+import &#39;./views/UserList.tag&#39;
+
+// подключаем компонент App
+import &#39;./views/App.tag&#39;
+
+// создаём общую примесь user и передаём в конструктор модели данных User
+// ссылку на библиотеку Riot.js, в виде аргумента riot
+riot.mixin({ user: new User(riot) })
+
+// монтируем компонент App
+riot.mount(&#39;app&#39;)</code></pre>
+<p>И если мы теперь запустим из терминала команду:</p>
+<pre><code>npm run dev</code></pre><p>то снова откроется страница браузера со списком из 10 пользователей:</p>
+<pre><code>Peter Mackenzie
+Cindy Zhang
+Ted Smith
+Susan Fernbrook
+Emily Kim
+Peter Zhang
+Cindy Smith
+Ted Fernbrook
+Susan Kim
+Emily Mackenzie</code></pre><p>В этом уроке мы создали компонент <strong>App</strong>, который является главным компонентом нашего приложения. В следующх уроках, мы создадим и добавим в него ещё несколько компонентов.</p>
+<h3 id="create-component-menu">Создание компонента Menu</h3>
+
+<p>В папке <strong>views</strong> создайте файл <strong>Menu.tag</strong></p>
+<pre><code class="language-html">&lt;r-menu&gt;
+
+  &lt;a href=&quot;#!/list&quot;&gt;Users&lt;/a&gt;
+
+  &lt;style&gt;
+    :scope {
+      margin-bottom: 10px;
+    }
+    a {
+      padding: 5px;
+      text-decoration: none;
+      font-size: 22px;
+    }
+  &lt;/style&gt;
+
+&lt;/r-menu&gt;</code></pre>
+<p>Это очень простое меню с одним единственным пунктом <strong>Users</strong>. Кроме этого, мы добавили нашему меню немного стилей.</p>
+<blockquote>
+<p>Обратите внимание, что в стилях мы используем псевдокласс <strong>:scope</strong>, который ссылается на сам компонент, т.е. на тег <code>&lt;r-menu&gt;</code>, который является контейнером для нашего компонента <strong>Menu</strong>.</p>
+</blockquote>
+<p>Наш новый компонент <strong>Menu</strong> мы будем подключать к компоненту <strong>Header</strong>, который мы создадим далее.</p>
+<h3 id="create-component-header">Создание компонента Header</h3>
+
+<p>Давайте создадим шапку нашего приложения. В папке <strong>views</strong> создайте файл <strong>Header.tag</strong></p>
+<pre><code class="language-html">&lt;r-header&gt;
+
+  &lt;!--  подключаем компонент Menu  --&gt;
+  &lt;nav data-is=&quot;r-menu&quot; /&gt;
+
+  &lt;img src=&quot;dist/img/riot.png&quot; alt=&quot;riot&quot;&gt;
+
+  &lt;style&gt;
+    :scope {
+      margin-top: 15px;
+      margin-bottom: 30px;
+      padding: 5px 15px;
+    }
+  &lt;/style&gt;
+
+&lt;/r-header&gt;</code></pre>
+<p>В самом начале нашего компонента <strong>Header</strong>, мы сразу подключаем компонент <strong>Menu</strong>, который мы создали на предыдущем шаге, через атрибут <strong>data-is</strong> html-элемента <strong>nav</strong>.</p>
+<blockquote>
+<p>В данном случае, мы могли бы и не использовать атрибут <strong>data-is</strong> в html-элементе <strong>nav</strong>, а напрямую подключить наш компонет, как мы это делали ранее: <code>&lt;r-menu /&gt;</code>. Но мы хотим следовать сементике и раскрыть некоторые возможности <strong>Riot.js</strong>, таким образом, всё содержимое нашего компонента <strong>Menu</strong>, окажется внутри html-элемента <strong>nav</strong>, который имеет атрибут <strong>data-is</strong>. Аналогичным образом мы поступим и с компонентом <strong>Header</strong>, и с компонентом <strong>Footer</strong>, который мы создадим далее, используя для этого соответствующие семантике - стандартные элементы html.</p>
+</blockquote>
+<p>Ко всему прочему, мы также добавим в него немного стилей и в качестве содержимого, мы добавим в наш компонент картинку с официального сайта <strong>Riot.js</strong>.</p>
+<p>Скачайте картинку: <a href="https://riot.js.org/img/logo/riot120x.png">https://riot.js.org/img/logo/riot120x.png</a> и переименуйте её в <strong>riot.png</strong>.</p>
+<p>В нашем приложении имеется папка <strong>assets</strong>, которая нужна для размещения в ней всевозможных дополнительных файлов, необходимых нашему приложению. К ним можно отнести изображения, шрифты и т.д. Создайте в ней папку <strong>img</strong> и перенесите в неё изображение, которое мы скачали ранее.</p>
+<p>Таким образом, структура нашего проекта, к данному моменту, должна иметь у вас следующий вид:</p>
+<pre><code class="language-js">app/
+    node_modules/
+    src/
+        assets/
+          img/
+            riot.png
+        models/
+          User.js
+        views/
+          App.tag
+          Header.tag
+          Menu.tag
+          UserList.tag
+        App.js
+    index.html
+    package.json
+    webpack.config.js</code></pre>
+<p>Давайте подключим наш компонент <strong>Header</strong> к компоненту <strong>App</strong> и перейдём к созданию компонента <strong>Footer</strong>.</p>
+<p>Откройте файл <strong>App.tag</strong> и добавьте в него компонент <strong>Header</strong> через атрибут <strong>data-is</strong>, стандартного html-элемента <strong>header</strong>:</p>
+<pre><code class="language-html">&lt;app&gt;
+
+  &lt;!--  подключаем компонент Header  --&gt;
+  &lt;header data-is=&quot;r-header&quot; /&gt;
+
+  &lt;!--  подключаем компонент UserList  --&gt;
+  &lt;r-list /&gt;
+
+&lt;/app&gt;</code></pre>
+<p>Мы пока не подключали наши новые компоненты к приложению в файле <strong>App.js</strong>. Мы сделаем это сразу, после создания компонента <strong>Footer</strong>, который будет представлять подвал нашего приложения.</p>
+<h3 id="create-component-footer">Создание компонента Footer</h3>
+
+<p>Создадим простой подвал для нашего приложения, который будет содержать только ссылку на официальный сайт <strong>Riot.js</strong>.</p>
+<p>В папке <strong>views</strong> создайте файл <strong>Footer.tag</strong></p>
+<pre><code class="language-html">&lt;r-footer&gt;
+
+  &lt;a href=&quot;https://riot.js.org/&quot; target=&quot;_blank&quot;&gt;Riot&lt;/a&gt;
+
+  &lt;style&gt;
+    :scope {
+      background: #222;
+      margin-top: auto;
+      padding: 25px 15px;
+      text-align: center;
+    }
+    a {
+      color: #fff;
+    }
+  &lt;/style&gt;
+
+&lt;/r-footer&gt;</code></pre>
+<p>Теперь подключим наш компонент <strong>Footer</strong> к компоненту <strong>App</strong>, через атрибут <strong>data-is</strong>, стандартного html-элемента <strong>footer</strong>.</p>
+<p>Откройте файл <strong>App.tag</strong> и добавьте в него компонент <strong>Footer</strong>:</p>
+<pre><code class="language-html">&lt;app&gt;
+
+  &lt;!--  подключаем компонент Header  --&gt;
+  &lt;header data-is=&quot;r-header&quot; /&gt;
+
+  &lt;!--  подключаем компонент UserList  --&gt;
+  &lt;r-list /&gt;
+
+  &lt;!--  подключаем компонент Footer  --&gt;
+  &lt;footer data-is=&quot;r-footer&quot; /&gt;
+
+&lt;/app&gt;</code></pre>
+<p>Последним шагом, мы подключим все три компонента к нашему приложению в файле <strong>App.js</strong>:</p>
+<pre><code class="language-js">// подключаем компонент Menu
+import &#39;./views/Menu.tag&#39;
+
+// подключаем компонент Header
+import &#39;./views/Header.tag&#39;
+
+// подключаем компонент Footer
+import &#39;./views/Footer.tag&#39;</code></pre>
+<p>Таким образом, наш файл <strong>App.js</strong> теперь имеет следующий вид:</p>
+<pre><code class="language-js">// подключаем Riot.js
+import riot from &#39;riot&#39;
+
+// подключаем модель данных User
+import User from &#39;./models/User&#39;
+
+// подключаем компонент UserList
+import &#39;./views/UserList.tag&#39;
+
+// подключаем компонент App
+import &#39;./views/App.tag&#39;
+
+// подключаем компонент Menu
+import &#39;./views/Menu.tag&#39;
+
+// подключаем компонент Header
+import &#39;./views/Header.tag&#39;
+
+// подключаем компонент Footer
+import &#39;./views/Footer.tag&#39;
+
+// создаём общую примесь user и передаём в конструктор модели данных User
+// ссылку на библиотеку Riot.js, в виде аргумента riot
+riot.mixin({ user: new User(riot) })
+
+// монтируем компонент App
+riot.mount(&#39;app&#39;)</code></pre>
+<p>Если мы сейчас снова запустим наше приложение командой:</p>
+<pre><code>npm run dev</code></pre><p>то откроется страница в браузере, которая будет вверху иметь меню, состоящее из одного пункта <strong>Users</strong>, хедер, содержащий неработающую картинку и футер, с сылкой на официальный сайт <strong>Riot.js</strong>.</p>
+<p>Кроме этого, поскольку мы никак не сбрасывали стили, наши компоненты будут иметь некоторые отступы по бокам. Исправим это, добавив нормализацию стилей в главный и единственный html-файл нашего приложения <strong>index.html</strong>:</p>
+<pre><code class="language-html">&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+  &lt;meta charset=&quot;UTF-8&quot;&gt;
+  &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;
+  &lt;meta http-equiv=&quot;X-UA-Compatible&quot; content=&quot;ie=edge&quot;&gt;
+  &lt;title&gt;Riot Application&lt;/title&gt;
+  &lt;!-- подключаем normalize.css --&gt;
+  &lt;link rel=&quot;stylesheet&quot; href=&quot;https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css&quot;/&gt;
+&lt;/head&gt;
+&lt;body data-is=&quot;app&quot;&gt;
+  &lt;script src=&quot;dist/build.js&quot;&gt;&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+<p>Ко всему прочему, мы бы ещё хотели, чтобы наш футер прижимался к нижней части экрана, когда содержимое нашего списка слишком мало и под ним остаётся свободное место. И для этого, мы добавим немного стилей к компоненту <strong>App</strong>, в которых задействуем флексы:</p>
+<pre><code class="language-html">&lt;app&gt;
+
+  &lt;!--  подключаем компонент Header  --&gt;
+  &lt;header data-is=&quot;r-header&quot; /&gt;
+
+  &lt;!--  подключаем компонент UserList  --&gt;
+  &lt;!-- &lt;r-list /&gt; --&gt;
+
+  &lt;!--  подключаем компонент Footer  --&gt;
+  &lt;footer data-is=&quot;r-footer&quot; /&gt;
+
+  &lt;!-- добавляем стили --&gt;
+  &lt;style&gt;
+    :scope {
+      display: flex;
+      flex-direction: column;
+      font: normal 16px Verdana;
+    }
+  &lt;/style&gt;
+
+&lt;/app&gt;</code></pre>
+<p>Но сейчас это не сработает, пока мы явно не зададим высоту для нашего приложения и документа, в котором оно содержится, равной ста процентам высоты экрана устройства, на котором оно будет отображаться.</p>
+<blockquote>
+<p>Мы не можем поместить стили для документа, в частности, для элемента <strong>html</strong> в компонент <strong>App</strong> нашего приложения, поскольку в css невозможно получить доступ к родительским элементам из дочерних. Поэтому, мы могли бы создать отдельный css-файл, в котором распологались бы стили, переопределяющие или дополняющие стили нашего приложения. Так мы и поступим позднее, а пока, мы временно добавим их в файл <strong>index.html</strong>, сразу после подключения <strong>normalize.css</strong>.</p>
+</blockquote>
+<p>Откройте файл <strong>index.html</strong> и добавьте стили для документа нашего приложения:</p>
+<pre><code class="language-html">&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+  &lt;meta charset=&quot;UTF-8&quot;&gt;
+  &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;
+  &lt;meta http-equiv=&quot;X-UA-Compatible&quot; content=&quot;ie=edge&quot;&gt;
+  &lt;title&gt;Riot Application&lt;/title&gt;
+  &lt;!-- подключаем normalize.css --&gt;
+  &lt;link rel=&quot;stylesheet&quot; href=&quot;https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css&quot;/&gt;
+  &lt;!-- стили документа --&gt;
+  &lt;style&gt;
+    html, body {
+      height: 100%;
+    }
+  &lt;/style&gt;
+&lt;/head&gt;
+&lt;body data-is=&quot;app&quot;&gt;
+  &lt;script src=&quot;dist/build.js&quot;&gt;&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+<p>Теперь, если мы запустим наше приложение командой:</p>
+<pre><code>npm run dev</code></pre><p> и откроем его в браузере, то футер будет прижиматься к нижней части экрана, когда содержимое списка слишком мало, чтобы полностью в нём уместиться. Но картинка по-прежнему отображаться не будет, и для того, чтобы это исправить, нам нужно вернуться в конфигурационный файл <strong>webpack.config.js</strong>.</p>
+<h3 id="configuration-file-end">Завершение файла конфигурации Webpack</h3>
+
+<p>Пришло время закончить с нашим файлом конфигурации. В этом уроке, мы выполним все необходимые действия для успешной работы нашего приложения, а в последующих, напишем ещё один компонент и добавим маршрутизацию к нашему приложению.</p>
+<p>Сейчас наш файл конфигурации <strong>webpack.config.js</strong>, должен выглядеть вот так:</p>
+<pre><code class="language-js">const path = require(&#39;path&#39;)
+
+module.exports = {
+  entry: &#39;./src/App.js&#39;,
+  output: {
+    path: path.resolve(__dirname, &#39;dist&#39;),
+    filename: &#39;build.js&#39;,
+    publicPath: &#39;dist/&#39;
+  },
+  module: {
+    rules: [
+      // добавляем новое правило для файлов компонентов (.tag)
+      {
+        test: /\.tag$/,
+        exclude: /(node_modules|bower_components)/,
+        use: &#39;riot-tag-new-loader&#39;
+      }
+    ]
+  }
+}</code></pre>
+<p>Первым делом, научим <strong>Webpack</strong> копировать файлы. И для этого, мы будем использовать плагин <a href="https://webpack.js.org/plugins/copy-webpack-plugin/">copy-webpack-plugin</a>.</p>
+<p>Давайте его установим. Откройте терминал из папки <strong>app</strong> нашего приложения и введите команду:</p>
+<pre><code>npm i -D copy-webpack-plugin</code></pre><p>В самом верху файла <strong>webpack.config.js</strong>, после подключения модуля путей <strong>path</strong>, добавим строку подключения нашего плагина:</p>
+<pre><code class="language-js">const path = require(&#39;path&#39;)
+
+// подключаем плагин для копирования файлов
+const CopyPlugin = require(&#39;copy-webpack-plugin&#39;)</code></pre>
+<p>Далее, в этом же файле, добавим в объект конфигурации новое свойство <strong>plugins</strong>, сразу после свойства <strong>module</strong>. И в нём зарегистрируем наш плагин и пропишем ему настройки для копирования файлов:</p>
+<pre><code class="language-js">plugins: [
+  // регистрируем плагин copy-webpack-plugin и задаём ему необходимые параметры
+  new CopyPlugin([
+    {
+      from: &#39;src/assets/**/*.{png,jpg}&#39;,
+      to: &#39;img&#39;,
+      flatten: true
+    }
+  ])
+]</code></pre>
+<ul>
+<li><strong>from</strong> - откуда и какие файлы копировать</li>
+<li><strong>to</strong> - в какую папку копировать</li>
+<li><strong>flatten</strong> - удалять ссылки на каталоги и копировать только файлы</li>
+</ul>
+<p>После всех манипуляций, вот так должен выглядть файл <strong>webpack.config.js</strong>:</p>
+<pre><code class="language-js">const path = require(&#39;path&#39;)
+
+// подключаем плагин для копирования файлов
+const CopyPlugin = require(&#39;copy-webpack-plugin&#39;)
+
+module.exports = {
+  entry: &#39;./src/App.js&#39;,
+  output: {
+    path: path.resolve(__dirname, &#39;dist&#39;),
+    filename: &#39;build.js&#39;,
+    publicPath: &#39;dist/&#39;
+  },
+  module: {
+    rules: [
+      // добавляем новое правило для файлов компонентов (.tag)
+      {
+        test: /\.tag$/,
+        exclude: /(node_modules|bower_components)/,
+        use: &#39;riot-tag-new-loader&#39;
+      }
+    ]
+  },
+  plugins: [
+    // регистрируем плагин copy-webpack-plugin и задаём ему необходимые параметры
+    new CopyPlugin([
+      {
+        from: &#39;src/assets/**/*.{png,jpg}&#39;,
+        to: &#39;img&#39;,
+        flatten: true
+      }
+    ])
+  ]
+}</code></pre>
+<p>Таким образом, все наши изображения будут помещены в папку <strong>img</strong>, которая будет распологаться в папке <strong>dist</strong>.</p>
+<p>Если мы сейчас запустим наше приложение:</p>
+<pre><code>npm run dev</code></pre><p>то откроется страница, в верху которой будет отображаться меню с одним единственным пунктом <strong>Users</strong>, а под ним появится наша картинка-логотип, которую мы прежде скачали, переименовали и поместили в папку <strong>assets</strong>.</p>
+<blockquote>
+<p>Вы могли заметить, что у нас до сих пор не появилось никакой папки <strong>dist</strong> в каталоге <strong>app</strong> нашего приложения. Это связано с тем, что мы запускаем <strong>Webpack</strong> в режиме разработки <code>npm run dev</code>, а не в режиме продакшена <code>npm run build</code>. В режиме разработки, <strong>Webpack</strong>, условно, создаёт её виртуальную копию, путь к которой прописан в свойстве <strong>publicPath</strong> свойства <strong>output</strong>, объекта конфигурации <strong>Webpack</strong>:</p>
+</blockquote>
+<pre><code class="language-js">output: {
+  path: path.resolve(__dirname, &#39;dist&#39;),
+  filename: &#39;build.js&#39;,
+  publicPath: &#39;dist/&#39;
+}</code></pre>
+<p>Следующее, что мы сделаем, мы установим и подключим <strong>Babel</strong>, который будет преобразовывать всю нашу <strong>ES6</strong> логику из компонентов и переводить её в код <strong>ES5</strong> для браузеров, которые плохо понимают современные стандарты <strong>JavaScript</strong>. И для этого, нам потребуется <a href="https://webpack.js.org/loaders/babel-loader/">babel-loader</a>.</p>
+<p>Откройте терминал и введите команду:</p>
+<pre><code>npm install -D babel-loader @babel/core @babel/preset-env</code></pre><p>Нам также потребуется немного изменить наше правило для файлов компонентов:</p>
+<pre><code class="language-js">module: {
+  rules: [
+    // добавляем новое правило для файлов компонентов (.tag)
+    {
+      test: /\.tag$/,
+      exclude: /(node_modules|bower_components)/,
+      use: [
+        {
+          loader: &#39;babel-loader&#39;,
+          options: {
+            presets: [&#39;@babel/preset-env&#39;]
+          }
+        },
+        {
+          loader: &#39;riot-tag-new-loader&#39;
+        }
+      ]
+    }
+  ]
+}</code></pre>
+<blockquote>
+<p>Правила <strong>Webpack</strong> работают справа налево и снизу вверх. Т.е. сначала, загрузчик <strong>riot-tag-new-loader</strong> получает наши компоненты из файлов <strong>.tag</strong> и преобразует их в обычный <strong>JavaScript</strong>, а уже затем, загрузчик <strong>babel-loader</strong> преобразует этот код в <strong>ES5</strong>.</p>
+</blockquote>
+<p>Мы бы ещё хотели, чтобы <strong>css</strong>, который мы пишем в компонентах, имел бы на выходе префиксы производителей для старых браузеров.</p>
+<p>Откройте терминал и введите команду:</p>
+<pre><code>npm i -D postcss autoprefixer</code></pre><p>Подключим эти модули в нашем файле конфигурации, после подключения плагина для копирования файлов:</p>
+<pre><code class="language-js">// подключаем плагин для копирования файлов
+const CopyPlugin = require(&#39;copy-webpack-plugin&#39;)
+
+// подключаем модули для обработки css в компонентах
+const postcss = require(&#39;postcss&#39;)
+const autoprefixer = require(&#39;autoprefixer&#39;)</code></pre>
+<p>Вернёмся к правилу для файлов компонентов и добавим в него оъект параметров <strong>riot-tag-new-loader</strong>, а в нём создадим новый пользовательский <strong>парсер css</strong>, которому передадим установленные выше модули:</p>
+<pre><code class="language-js">module: {
+  rules: [
+    // добавляем новое правило для файлов компонентов (.tag)
+    {
+      test: /\.tag$/,
+      exclude: /(node_modules|bower_components)/,
+      use: [
+        {
+          loader: &#39;babel-loader&#39;,
+          options: {
+            presets: [&#39;@babel/preset-env&#39;]
+          }
+        },
+        {
+          loader: &#39;riot-tag-new-loader&#39;,
+          // объект параметров riot-tag-new-loader
+          options: {
+            parsers: {
+              // создаём пользовательский парсер css и передаём ему модули
+              // для добавления префиксов к стилям наших компонентов
+              css: {
+                plain: function(tag, css) {
+                  return postcss([ autoprefixer({ browsers: [&#39;last 15 versions&#39;] }) ]).process(css).css
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}</code></pre>
+<p>Мы назвали наш парсер <strong>plain</strong>, но могли бы называть как угодно. Данное название, как нельзя лучше, описывает тип стилей наших компонентов - это <strong>простой</strong> css. Для того, чтобы наш парсер смог обрабатывать эти стили, нам необходимо будет задать им тип, соответствующий названию нашего парсера, в тегах <strong>style</strong> каждого компонента.</p>
+<p>Пройдитесь по всем компонентам содержащим стили, и добавьте в их теги <strong>style</strong> атрибут <strong>type</strong> со значением <strong>plain</strong>:</p>
+<pre><code class="language-html">&lt;style type=&quot;plain&quot;&gt;
+    /* стили компонента */
+&lt;/style&gt;</code></pre>
+<p>Наш главный файл приложения <strong>App.js</strong> может содержать в себе код <strong>ES6</strong>, кроме этого, вы можете подключать к нему другие файлы <strong>JavaScript</strong>, которые тоже будут содержать в себе код, отвечающий последним стандарнам <strong>JS</strong>. И для того, чтобы все браузеры смогли с ним работать, эти файлы нам тоже придётся пропустить через <strong>Babel</strong>.</p>
+<p>Добавим новое правило для файлов <strong>JavaScript</strong> в массив <strong>rules</strong> объекта конфигурации <strong>Webpack</strong>:</p>
+<pre><code class="language-js">// добавляем новое правило для файлов JavaScript
+{
+  test: /\.js$/,
+  exclude: /(node_modules|bower_components)/,
+  use: {
+    loader: &#39;babel-loader&#39;,
+    options: {
+      presets: [&#39;@babel/preset-env&#39;]
+    }
+  }
+}</code></pre>
+<p>К этому моменту, файл <strong>webpack.config.js</strong> должен выглядеть так:</p>
+<pre><code class="language-js">const path = require(&#39;path&#39;)
+
+// подключаем плагин для копирования файлов
+const CopyPlugin = require(&#39;copy-webpack-plugin&#39;)
+
+// подключаем модули для обработки css в компонентах
+const postcss = require(&#39;postcss&#39;)
+const autoprefixer = require(&#39;autoprefixer&#39;)
+
+module.exports = {
+  entry: &#39;./src/App.js&#39;,
+  output: {
+    path: path.resolve(__dirname, &#39;dist&#39;),
+    filename: &#39;build.js&#39;,
+    publicPath: &#39;dist/&#39;
+  },
+  module: {
+    rules: [
+      // добавляем новое правило для файлов компонентов (.tag)
+      {
+        test: /\.tag$/,
+        exclude: /(node_modules|bower_components)/,
+        use: [
+          {
+            loader: &#39;babel-loader&#39;,
+            options: {
+              presets: [&#39;@babel/preset-env&#39;]
+            }
+          },
+          {
+            loader: &#39;riot-tag-new-loader&#39;,
+            // объект параметров riot-tag-new-loader
+            options: {
+              parsers: {
+                // создаём пользовательский парсер css и передаём ему модули
+                // для добавления префиксов к стилям наших компонентов
+                css: {
+                  plain: function(tag, css) {
+                    return postcss([ autoprefixer({ browsers: [&#39;last 15 versions&#39;] }) ]).process(css).css
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      // добавляем новое правило для файлов JavaScript
+      {
+        test: /\.js$/,
+        exclude: /(node_modules|bower_components)/,
+        use: {
+          loader: &#39;babel-loader&#39;,
+          options: {
+            presets: [&#39;@babel/preset-env&#39;]
+          }
+        }
+      }
+    ]
+  },
+  plugins: [
+    // регистрируем плагин copy-webpack-plugin и задаём ему необходимые параметры
+    new CopyPlugin([
+      {
+        from: &#39;src/assets/**/*.{png,jpg}&#39;,
+        to: &#39;img&#39;,
+        flatten: true
+      }
+    ])
+  ]
+}</code></pre>
+<p>Нам осталось создать папку для стилей, которые не могут или не должны распологаться в файлах компонентов, на примере того, как мы перед этим вынесли стили для документа в файл <strong>index.html</strong>.</p>
+<p>В папке <strong>src</strong> создайте папку <strong>sass</strong>, а в ней создайте файл <strong>styles.scss</strong>.</p>
+<p>Структура проекта примет следующий вид:</p>
+<pre><code class="language-js">app/
+    node_modules/
+    src/
+        assets/
+          img/
+            riot.png
+        models/
+          User.js
+        sass/
+          styles.scss
+        views/
+          App.tag
+          Footer.tag
+          Header.tag
+          Menu.tag
+          UserList.tag
+        App.js
+    index.html
+    package.json
+    webpack.config.js</code></pre>
+<p>Откройте файл <strong>styles.scss</strong> и добавьте в него стили для документа:</p>
+<pre><code class="language-scss">// стили документа
+html, body {
+  height: 100%;
+}</code></pre>
+<p>Теперь откройте файл <strong>index.html</strong> и удалите из него теги <strong>style</strong> вместе со стилями для документа, поскольку, мы вынесли их в отдельный файл <strong>styles.scss</strong>.</p>
+<blockquote>
+<p>Если вы ещё не познакомились с <a href="https://sass-scss.ru/">Sass</a>, который является препроцессором <strong>css</strong>, то просто пишите в файле <strong>styles.scss</strong> свои стили так, как вы пишете их в обычном файле <strong>css</strong>.</p>
+</blockquote>
+<p>Кроме этого, мы добавим подключение в <strong>index.html</strong> внешнего файла <strong>build.css</strong>, в котором и будут храниться все стили, которые мы пишем в файле <strong>styles.scss</strong>.</p>
+<blockquote>
+<p>Препроцессор <strong>Sass</strong> на выходе возвращает обычный файл <strong>css</strong>.</p>
+</blockquote>
+<p>Но перед подключением файла <strong>build.css</strong>, мы укажем <strong>Riot.js</strong>, куда он должен будет помещать стили из компонентов в тег <strong>head</strong> файла <strong>index.html</strong>. Они должны быть помещены перед стилями из внешнего файла  <strong>build.css</strong>, поскольку, предполагается, что стили в этом файле должны дополнять или переопределять стили компонентов. Согласно каскадности в <strong>css</strong>, последние добавленные стили с одинаковым приоритетом, переопределяют стили добавленные первыми. Для того, чтобы <strong>Riot.js</strong> понимал, куда ему нужно добавлять стили из компонентов, используется пустой тег <strong>style</strong> с атрибутом <strong>type</strong> и значением <strong>riot</strong>.</p>
+<p>Таким образом, наш файл <strong>index.html</strong> теперь должен выглядеть так:</p>
+<pre><code class="language-html">&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+  &lt;meta charset=&quot;UTF-8&quot;&gt;
+  &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;
+  &lt;meta http-equiv=&quot;X-UA-Compatible&quot; content=&quot;ie=edge&quot;&gt;
+  &lt;title&gt;Riot Application&lt;/title&gt;
+  &lt;!-- подключаем normalize.css --&gt;
+  &lt;link rel=&quot;stylesheet&quot; href=&quot;https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css&quot;/&gt;
+  &lt;!-- стили компонентов --&gt;
+  &lt;style type=&quot;riot&quot;&gt;&lt;/style&gt;
+  &lt;!-- внешние стили --&gt;
+  &lt;link rel=&quot;stylesheet&quot; href=&quot;dist/build.css&quot;&gt;
+&lt;/head&gt;
+&lt;body data-is=&quot;app&quot;&gt;
+  &lt;script src=&quot;dist/build.js&quot;&gt;&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+<p>Стили в <strong>Webpack</strong> подключаются к <strong>JavaScript</strong>, из которого, они потом достаются и обрабатываются специальными загрузчиками. Откройте файл <strong>App.js</strong> и после подключения компонента <strong>Footer</strong>, добавьте подключение внешнего файла стилей:</p>
+<pre><code class="language-js">// подключаем компонент Footer
+import &#39;./views/Footer.tag&#39;
+
+// подключаем внешние стили
+import &#39;./sass/styles.scss&#39;</code></pre>
+<p>Как было  сказано выше, стили подключатся к <strong>JavaScript</strong>, из которого они потом обрабатываются специальными загрузчиками <strong>Webpack</strong>. Запустите терминал из папки <strong>app</strong> нашего приложения и введите команду:</p>
+<pre><code>npm i -D css-loader style-loader postcss-loader sass-loader node-sass</code></pre><p>Добавим новое правило для <strong>внешних стилей</strong>, сразу после правила для файлов <strong>JavaScript</strong>:</p>
+<pre><code class="language-js">// добавляем новое правило для внешних стилей (.scss)
+{
+  test: /\.scss$/,
+  use: [
+    &#39;style-loader&#39;,
+    &#39;css-loader&#39;,
+    &#39;postcss-loader&#39;,
+    &#39;sass-loader&#39;
+  ]
+}</code></pre>
+<p>Кроме этого, в папке <strong>app</strong> нашего приложения, там, где у нас находится файл <strong>webpack.config.js</strong>, создайте файл конфигурации <strong>postcss.config.js</strong> для <strong>postcss-loader</strong> и добавьте в него:</p>
+<pre><code class="language-js">module.exports = {
+  plugins: {
+    autoprefixer: {
+      browsers: [&#39;last 15 versions&#39;]
+    }
+  }
+}</code></pre>
+<p>В этом файле, мы просто указывает плагины, которые будет использовать <strong>postcss-loader</strong>. У нас таких плагинов всего один, это <strong>autoprefixer</strong>, который мы установили ранее.</p>
+<p>Структура проекта должна принять вид:</p>
+<pre><code class="language-js">app/
+    node_modules/
+    src/
+        assets/
+          img/
+            riot.png
+        models/
+          User.js
+        sass/
+          styles.scss
+        views/
+          App.tag
+          Footer.tag
+          Header.tag
+          Menu.tag
+          UserList.tag
+        App.js
+    index.html
+    package.json
+    postcss.config.js
+    webpack.config.js</code></pre>
+<p>а содержимое файла конфигурации <strong>webpack.config.js</strong>, должно быть таким:</p>
+<pre><code class="language-js">const path = require(&#39;path&#39;)
+
+// подключаем плагин для копирования файлов
+const CopyPlugin = require(&#39;copy-webpack-plugin&#39;)
+
+// подключаем модули для обработки css в компонентах
+const postcss = require(&#39;postcss&#39;)
+const autoprefixer = require(&#39;autoprefixer&#39;)
+
+module.exports = {
+  entry: &#39;./src/App.js&#39;,
+  output: {
+    path: path.resolve(__dirname, &#39;dist&#39;),
+    filename: &#39;build.js&#39;,
+    publicPath: &#39;dist/&#39;
+  },
+  module: {
+    rules: [
+      // добавляем новое правило для файлов компонентов (.tag)
+      {
+        test: /\.tag$/,
+        exclude: /(node_modules|bower_components)/,
+        use: [
+          {
+            loader: &#39;babel-loader&#39;,
+            options: {
+              presets: [&#39;@babel/preset-env&#39;]
+            }
+          },
+          {
+            loader: &#39;riot-tag-new-loader&#39;,
+            // объект параметров riot-tag-new-loader
+            options: {
+              parsers: {
+                // создаём пользовательский парсер css и передаём ему модули
+                // для добавления префиксов к стилям наших компонентов
+                css: {
+                  plain: function(tag, css) {
+                    return postcss([ autoprefixer({ browsers: [&#39;last 15 versions&#39;] }) ]).process(css).css
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      // добавляем новое правило для файлов JavaScript
+      {
+        test: /\.js$/,
+        exclude: /(node_modules|bower_components)/,
+        use: {
+          loader: &#39;babel-loader&#39;,
+          options: {
+            presets: [&#39;@babel/preset-env&#39;]
+          }
+        }
+      },
+      // добавляем новое правило для внешних стилей (.scss)
+      {
+        test: /\.scss$/,
+        use: [
+          &#39;style-loader&#39;,
+          &#39;css-loader&#39;,
+          &#39;postcss-loader&#39;,
+          &#39;sass-loader&#39;
+        ]
+      }
+    ]
+  },
+  plugins: [
+    // регистрируем плагин copy-webpack-plugin и задаём ему необходимые параметры
+    new CopyPlugin([
+      {
+        from: &#39;src/assets/**/*.{png,jpg}&#39;,
+        to: &#39;img&#39;,
+        flatten: true
+      }
+    ])
+  ]
+}</code></pre>
+<p>Как мы помним, правила работают справа налево и снизу вверх. Т.е. сначала, <strong>sass-loader</strong> преобразует стили хранящиеся в файле <strong>styles.scss</strong> и написанные по правилам препроцессора <strong>Sass</strong> в обычный <strong>css</strong>, затем, этот <strong>css</strong> поступает в <strong>postcss-loader</strong>, в конфигурационном файле которого указан плагин <strong>autoprefixer</strong>, после этого, стили с добавленными префиксами производителей браузеров передаются в <strong>css-loader</strong>, который разрешает пути в <strong>css</strong>, а затем, они поступают в <strong>style-loader</strong>, который сохраняет их в <strong>JavaScript</strong> и подгружает в тег <strong>head</strong> нашего файла <strong>index.html</strong>.</p>
+<p>Если мы сейчас запустим наш проект в режиме продакшена:</p>
+<pre><code>npm run build</code></pre><p>то в папке <strong>app</strong> нашего приложения появится каталог <strong>dist</strong>, в котором будут находиться файл <strong>build.js</strong> и папка <strong>img</strong> с картинкой-логотипом <strong>riot.png</strong>. При этом, страница приложения не будет открыта автоматически в браузере, а <strong>Webpack</strong> завершит своё выполнение в командной строке терминала. После этого, мы можем передать файл <strong>index.html</strong> и папку <strong>dist</strong>, потенциальному заказчику нашего экспериментального приложения.</p>
+<p>Но мы бы хотели, чтобы внешние стили у нас были всё-таки в отдельном файле <strong>css</strong>, а не в коде <strong>JavaScript</strong> файла <strong>build.js</strong>. И для этого, установим плагин <a href="https://webpack.js.org/plugins/mini-css-extract-plugin/">mini-css-extract-plugin</a>:</p>
+<pre><code>npm i -D mini-css-extract-plugin</code></pre><p>Откроем файл <strong>webpack.config.js</strong> и добавим подключение этого плагина в самом верху, сразу после подключения модулей для обработки <strong>css</strong> в компонентах:</p>
+<pre><code class="language-js">// подключаем модули для обработки css в компонентах
+const postcss = require(&#39;postcss&#39;)
+const autoprefixer = require(&#39;autoprefixer&#39;)
+
+// подключаем плагин для извлечения css в отдельный файл
+const MiniCssExtractPlugin = require(&#39;mini-css-extract-plugin&#39;)</code></pre>
+<p>И сразу зарегистрируем его в нижней части файла, в секции <strong>plugins</strong>:</p>
+<pre><code class="language-js">plugins: [
+  // регистрируем плагин copy-webpack-plugin и задаём ему необходимые параметры
+  new CopyPlugin([
+    {
+      from: &#39;src/assets/**/*.{png,jpg}&#39;,
+      to: &#39;img&#39;,
+      flatten: true
+    }
+  ]),
+  // регистрируем плагин mini-css-extract-plugin и задаём ему необходимые параметры
+  new MiniCssExtractPlugin({
+    filename: &#39;build.css&#39;
+  })
+]</code></pre>
+<p>Мы передаём плагину всего один параметр, это имя нашего итогового файла <strong>css</strong>. Как мы помним, он будет называться <strong>build.css</strong>.</p>
+<p>Для режима разработки, мы будем использовать загрузчик стилей <strong>style-loader</strong>, а в режиме продакшена задействуем плагин <strong>MiniCssExtractPlugin</strong>.</p>
+<p>Давайте внесём небольшие изменения в правило для внешних стилей:</p>
+<pre><code class="language-js">// добавляем новое правило для внешних стилей (.scss)
+{
+  test: /\.scss$/,
+  use: [
+    // для продакшена используется плагин MiniCssExtractPlugin,
+    // а для разработки будет применяться загрузчик style-loader
+    options.mode === &#39;production&#39; ? MiniCssExtractPlugin.loader : &#39;style-loader&#39;,
+    &#39;css-loader&#39;,
+    &#39;postcss-loader&#39;,
+    &#39;sass-loader&#39;
+  ]
+}</code></pre>
+<p>Но откуда взялось <strong>options.mode</strong>?</p>
+<p>Если мы внимательно посмотрим, то наш файл конфигурации <strong>webpack.config.js</strong> - это просто модуль <strong>Node.js</strong>, который экспортирует объект конфигурации <strong>Webpack</strong>:</p>
+<pre><code class="language-js">module.exports = {
+  // содержит точку входа, вывода, правила и плагины
+}</code></pre>
+<p>Можно экспортировать не только объект, но и функцию, которая будет иметь некоторые параметры, которыми мы сможем воспользоваться для получения нужной нам информации. Другими словами, мы можем сделать так:</p>
+<pre><code class="language-js">module.exports = (env, options) =&gt; {
+  return {
+    // содержит точку входа, вывода, правила и плагины
+  }
+}</code></pre>
+<p>Второй параметр этой функции, т.е. параметр <strong>options</strong>, содержит свойство <strong>mode</strong>, которое позволяет определить, в каком режиме был запущен <strong>Webpack</strong>.</p>
+<p>Давайте изменим наш файл конфигурации в последний раз и вместо экспорта объекта конфигурации, мы экспортируем функцию с двумя параметрами, которая, в свою очередь, будет возвращать этот самый объект конфигурации  <strong>Webpack</strong>.</p>
+<p>Откройте файл <strong>webpack.config.js</strong> и внесите в него изменения, в соответствии с приведённым выше примером.</p>
+<p>Финальный вид нашего файла конфигурации:</p>
+<pre><code class="language-js">const path = require(&#39;path&#39;)
+
+// подключаем плагин для копирования файлов
+const CopyPlugin = require(&#39;copy-webpack-plugin&#39;)
+
+// подключаем модули для обработки css в компонентах
+const postcss = require(&#39;postcss&#39;)
+const autoprefixer = require(&#39;autoprefixer&#39;)
+
+// подключаем плагин для извлечения css в отдельный файл
+const MiniCssExtractPlugin = require(&#39;mini-css-extract-plugin&#39;)
+
+// экспортируем функцию с двумя параметрами
+module.exports = (env, options) =&gt; {
+
+  // функция возвращает объект конфигурации Webpack
+  return {
+    entry: &#39;./src/App.js&#39;,
+    output: {
+      path: path.resolve(__dirname, &#39;dist&#39;),
+      filename: &#39;build.js&#39;,
+      publicPath: &#39;dist/&#39;
+    },
+    module: {
+      rules: [
+        // добавляем новое правило для файлов компонентов (.tag)
+        {
+          test: /\.tag$/,
+          exclude: /(node_modules|bower_components)/,
+          use: [
+            {
+              loader: &#39;babel-loader&#39;,
+              options: {
+                presets: [&#39;@babel/preset-env&#39;]
+              }
+            },
+            {
+              loader: &#39;riot-tag-new-loader&#39;,
+              // объект параметров riot-tag-new-loader
+              options: {
+                parsers: {
+                  // создаём пользовательский парсер css и передаём ему модули
+                  // для добавления префиксов к стилям наших компонентов
+                  css: {
+                    plain: function(tag, css) {
+                      return postcss([ autoprefixer({ browsers: [&#39;last 15 versions&#39;] }) ]).process(css).css
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        // добавляем новое правило для файлов JavaScript
+        {
+          test: /\.js$/,
+          exclude: /(node_modules|bower_components)/,
+          use: {
+            loader: &#39;babel-loader&#39;,
+            options: {
+              presets: [&#39;@babel/preset-env&#39;]
+            }
+          }
+        },
+        // добавляем новое правило для внешних стилей (.scss)
+        {
+          test: /\.scss$/,
+          use: [
+            // для продакшена используется плагин MiniCssExtractPlugin,
+            // а для разработки будет применяться загрузчик style-loader
+            options.mode === &#39;production&#39; ? MiniCssExtractPlugin.loader : &#39;style-loader&#39;,
+            &#39;css-loader&#39;,
+            &#39;postcss-loader&#39;,
+            &#39;sass-loader&#39;
+          ]
+        }
+      ]
+    },
+    plugins: [
+      // регистрируем плагин copy-webpack-plugin и задаём ему необходимые параметры
+      new CopyPlugin([
+        {
+          from: &#39;src/assets/**/*.{png,jpg}&#39;,
+          to: &#39;img&#39;,
+          flatten: true
+        }
+      ]),
+      // регистрируем плагин mini-css-extract-plugin и задаём ему необходимые параметры
+      new MiniCssExtractPlugin({
+        filename: &#39;build.css&#39;
+      })
+    ]
+  }
+
+}</code></pre>
+<p>Если снова запустить наш проект в режиме продакшена:</p>
+<pre><code>npm run build</code></pre><p>то в папке <strong>dist</strong> окажется файл стилей <strong>build.css</strong>.</p>
+<blockquote>
+<p>Папка <strong>dist</strong> создаётся в режиме продакшена, когда вы в первый раз в нём запускаете <strong>Webpack</strong>. Для режима разработки эта папка не нужна.</p>
+</blockquote>
+<p>Мы закончили с нашим файлом конфигурации <strong>Webpack</strong>. Теперь нам осталось создать последний компонент для работы с пользователями и добавить маршрутизацию к нашему приложению.</p>
+<h3 id="create-component-userform">Создание компонента UserForm</h3>
+
+<p>Это будет наш последний компонент в приложении. Он будет содержать в себе форму с двумя полями ввода и три кнопки. Данный компонент реализует все операции <a href="https://ru.wikipedia.org/wiki/CRUD">CRUD</a> (Создание, Чтение, Обновление и Удаление) для пользователей из списка.</p>
+<p>В папке <strong>views</strong>  создайте файл <strong>UserForm.tag</strong></p>
+<pre><code class="language-html">&lt;r-form&gt;
+
+  &lt;form class=&quot;form&quot;&gt;
+    &lt;label class=&quot;form__label&quot;&gt;First name&lt;/label&gt;
+    &lt;input type=&quot;text&quot; class=&quot;form__input&quot; oninput={ inputValue } data-name=&quot;firstName&quot; placeholder=&quot;First name&quot; value=&quot;{ firstName }&quot;&gt;
+    &lt;label class=&quot;form__label&quot;&gt;Last name&lt;/label&gt;
+    &lt;input type=&quot;text&quot; class=&quot;form__input&quot; oninput={ inputValue } data-name=&quot;lastName&quot; placeholder=&quot;Last name&quot; value=&quot;{ lastName }&quot;&gt;
+    &lt;button class=&quot;form__btn form__btn--create&quot; onclick={ clickButton } data-method=&quot;createUser&quot;&gt;Create&lt;/button&gt;
+    &lt;button class=&quot;form__btn form__btn--delete&quot; onclick={ clickButton } data-method=&quot;deleteUser&quot;&gt;Delete&lt;/button&gt;
+    &lt;button class=&quot;form__btn form__btn--update&quot; onclick={ clickButton } data-method=&quot;updateUser&quot;&gt;Update&lt;/button&gt;
+  &lt;/form&gt;
+
+  &lt;style type=&quot;plain&quot;&gt;
+    .form__label {
+      display: inline-block;
+      margin: 0 0 5px;
+    }
+    .form__input {
+      border: 1px solid #ddd;
+      border-radius: 3px;
+      box-sizing: border-box;
+      display: block;
+      margin: 0 0 10px;
+      padding: 10px 15px;
+      width: 100%;
+    }
+    .form__btn {
+      background: #ddd;
+      border: 1px solid #ddd;
+      border-radius: 3px;
+      color: #fff;
+      cursor: pointer;
+      display: inline-block;
+      margin-top: 20px;
+      padding: 10px 15px;
+      text-decoration: none;
+    }
+    .form__btn--create {
+      background: #41BA5E;
+    }
+    .form__btn--delete {
+      background: #FF0044;
+    }
+    .form__btn--update {
+      background: #0B77B3;
+    }
+    .form__btn:hover {
+      background: #ddd;
+      color: #222;
+    }
+  &lt;/style&gt;
+
+  &lt;script&gt;
+    // обработчик события ввода в текстовое поле
+    inputValue(e) {
+      e.preventUpdate = true
+      this.user.current[e.target.dataset.name] = e.target.value
+    }
+
+    // обработчик события нажатия на кнопку
+    clickButton(e) {
+      e.preventDefault()
+      e.preventUpdate = true
+      this.user[e.target.dataset.method]()
+    }
+
+    // переходим на страницу list (список пользователей)
+    // при получении события home от модели данных
+    this.user.one(&#39;home&#39;, () =&gt; this.route(&#39;list&#39;))
+
+    // обработчик события маршрутизатора
+    this.on(&#39;route&#39;, (id) =&gt; this.user.getUser(id))
+
+    // запускаем событие обновления компонента (this.update)
+    // при получении события updated от модели данных
+    this.user.one(&#39;updated&#39;, this.update)
+
+    // обработчик события обновления компонента
+    this.on(&#39;update&#39;, () =&gt; {
+      this.firstName = this.user.current.firstName
+      this.lastName = this.user.current.lastName
+    })
+  &lt;/script&gt;
+
+&lt;/r-form&gt;</code></pre>
+<p>Структура компонента к этому моменту, должна быть вам уже хорошо знакома. Не забываем только в теге стилей компонентов <strong>style</strong>, указывать тип <strong>plain</strong>.</p>
+<p>Давайте сначала подключим наш компонент к приложению в файле <strong>App.js</strong>, а потом вернёмся и рассмотрим его шаблон и логику более подробно.</p>
+<p>Откройте файл <strong>App.js</strong> и перед подключением внешних стилей, но после подключения компонента <strong>Footer</strong>, добавим подключение компонента <strong>UserForm</strong>:</p>
+<pre><code class="language-js">// подключаем компонент Footer
+import &#39;./views/Footer.tag&#39;
+
+// подключаем компонент UserForm
+import &#39;./views/UserForm.tag&#39;
+
+// подключаем внешние стили
+import &#39;./sass/styles.scss&#39;</code></pre>
+<blockquote>
+<p>Мы могли бы подключить компонент и после подключения внешних стилей. Так просто выглядит более логично и соответствует порядку создания наших компонентов.</p>
+</blockquote>
+<p>Файл <strong>App.js</strong> нам пока больше не нужен. Вернёмся к нашему компоненту <strong>UserForm</strong> и рассмотрим его шаблон:</p>
+<pre><code class="language-html">&lt;form class=&quot;form&quot;&gt;
+  &lt;label class=&quot;form__label&quot;&gt;First name&lt;/label&gt;
+  &lt;input type=&quot;text&quot; class=&quot;form__input&quot; oninput={ inputValue } data-name=&quot;firstName&quot; placeholder=&quot;First name&quot; value=&quot;{ firstName }&quot;&gt;
+  &lt;label class=&quot;form__label&quot;&gt;Last name&lt;/label&gt;
+  &lt;input type=&quot;text&quot; class=&quot;form__input&quot; oninput={ inputValue } data-name=&quot;lastName&quot; placeholder=&quot;Last name&quot; value=&quot;{ lastName }&quot;&gt;
+  &lt;button class=&quot;form__btn form__btn--create&quot; onclick={ clickButton } data-method=&quot;createUser&quot;&gt;Create&lt;/button&gt;
+  &lt;button class=&quot;form__btn form__btn--delete&quot; onclick={ clickButton } data-method=&quot;deleteUser&quot;&gt;Delete&lt;/button&gt;
+  &lt;button class=&quot;form__btn form__btn--update&quot; onclick={ clickButton } data-method=&quot;updateUser&quot;&gt;Update&lt;/button&gt;
+&lt;/form&gt;</code></pre>
+<p>Как мы помним, выражения в <strong>Riot.js</strong> указываются между двумя фигурными скобками и могут распологаться как в атрибутах html-элементов, так и представлять их содержимое, т.е. находиться между их тегами. Кавычки в атрибутах для выражений не имеют значения.</p>
+<p>Форма нашего компонента содержит два текстовых поля ввода и три кнопки. Оба поля имеют пользовательские атрибуты <strong>data-name</strong>, первое поле в нём содержит значение <strong>firstName</strong>, а второе, значение <strong>lastName</strong>:</p>
+<pre><code class="language-html">&lt;form class=&quot;form&quot;&gt;
+  &lt;label class=&quot;form__label&quot;&gt;First name&lt;/label&gt;
+  &lt;input type=&quot;text&quot; class=&quot;form__input&quot; oninput={ inputValue } data-name=&quot;firstName&quot; placeholder=&quot;First name&quot; value=&quot;{ firstName }&quot;&gt;
+  &lt;label class=&quot;form__label&quot;&gt;Last name&lt;/label&gt;
+  &lt;input type=&quot;text&quot; class=&quot;form__input&quot; oninput={ inputValue } data-name=&quot;lastName&quot; placeholder=&quot;Last name&quot; value=&quot;{ lastName }&quot;&gt;
+&lt;/form&gt;</code></pre>
+<p>Кроме этого, оба поля вызывают функцию <strong>inputValue</strong>, при наступлении события <strong>input</strong>. Для этого, в значении атрибута <strong>oninput</strong> каждого из полей, содержится ссылка на эту самую функцию:</p>
+<pre><code class="language-js">oninput={ inputValue }</code></pre>
+<p>Рассмотрим эту функцию:</p>
+<pre><code class="language-js">// обработчик события ввода в текстовое поле
+inputValue(e) {
+  e.preventUpdate = true
+  this.user.current[e.target.dataset.name] = e.target.value
+}</code></pre>
+<p>Она начинается с прерывания события обновления компонента:</p>
+<pre><code class="language-js">e.preventUpdate = true</code></pre>
+<p>Событие обновления компонента (<strong>this.update</strong>) вызывается всякий раз, когда вызывается какая-либо пользовательская функция, но в данном случае, нет никакой необходимости обновлять компонент и тратить на это время и ресурсы браузера. Если бы мы этого не сделали, то после каждого ввода символа в любое из текстовых полей, вызывалось бы это событие и запускался бы его обработчик:</p>
+<pre><code class="language-js">// обработчик события обновления компонента
+this.on(&#39;update&#39;, () =&gt; {
+  this.firstName = this.user.current.firstName
+  this.lastName = this.user.current.lastName
+})</code></pre>
+<p>Второй командой в функции <strong>inputValue</strong>, является:</p>
+<pre><code class="language-js">this.user.current[e.target.dataset.name] = e.target.value</code></pre>
+<p>Эта команда обращается к объекту <strong>current</strong> нашей модели данных <strong>User</strong>, и присваивает его свойству значение из соответствующего поля ввода, каждый раз, когда в это поле вводятся какие-то данные. Название свойства для объекта <strong>current</strong> берётся из атрибута <strong>data-name</strong> текстового поля, с которым в данный момент осуществляется интерактивное взаимодействие.</p>
+<p>Как мы помним, наша модель данных <strong>User</strong> является общедоступной для всех компонентов благодаря тому, что мы вынесли её в общую примесь <strong>user</strong> в файле <strong>App.js</strong>:</p>
+<pre><code class="language-js">riot.mixin({ user: new User(riot) })</code></pre>
+<p>В функции <strong>inputValue</strong>, компонент ссылается на примесь <strong>user</strong>, через одноимённое свойство:</p>
+<pre><code class="language-js">this.user</code></pre>
+<p>Теперь рассмотрим кнопки в нашем шаблоне:</p>
+<pre><code class="language-html">&lt;button class=&quot;form__btn form__btn--create&quot; onclick={ clickButton } data-method=&quot;createUser&quot;&gt;Create&lt;/button&gt;
+&lt;button class=&quot;form__btn form__btn--delete&quot; onclick={ clickButton } data-method=&quot;deleteUser&quot;&gt;Delete&lt;/button&gt;
+&lt;button class=&quot;form__btn form__btn--update&quot; onclick={ clickButton } data-method=&quot;updateUser&quot;&gt;Update&lt;/button&gt;</code></pre>
+<p>Кнопки, как и поля, содержат пользовательские атрибуты, которые в кнопках называются <strong>data-method</strong> и содержат название вызываемого метода для соответствующей кнопки. Кроме этого, они также содержат атрибут <strong>onclick</strong>, который ссылается на функцию <strong>clickButton</strong> при срабатывании события <strong>click</strong> для кнопки.</p>
+<p>Рассмотрим эту функцию подробнее:</p>
+<pre><code class="language-js">// обработчик события нажатия на кнопку
+clickButton(e) {
+  e.preventDefault()
+  e.preventUpdate = true
+  this.user[e.target.dataset.method]()
+}</code></pre>
+<p>В самом начале этой функции, мы останавливаем действие по умолчанию для кнопки, вызывая метод <strong>preventDefault</strong> объекта события <strong>event</strong>, который для краткости у нас называется <strong>e</strong>:</p>
+<pre><code class="language-js">e.preventDefault()</code></pre>
+<p>Вторая команда функции <strong>clickButton</strong> служит для той же цели, что и такая же команда в функции <strong>inputValue</strong>. Она отменяет автоматический вызов обработчика обновления компонента:</p>
+<pre><code class="language-js">e.preventUpdate = true</code></pre>
+<p>Последней командой функции, является:</p>
+<pre><code class="language-js">this.user[e.target.dataset.method]()</code></pre>
+<p>Давайте пошагово изучим, что она делает.</p>
+<p>В квадратных скобках:</p>
+<pre><code class="language-js">[e.target.dataset.method]</code></pre>
+<p>происходит обращение к кнопке на которой сработало событие и осуществляется доступ к её пользовательскому атрибуту <strong>data-method</strong> для получения его значения, которое, является названием вызываемой функции из модели данных <strong>User</strong>. На эту модель данных мы ссылаемся через свойство:</p>
+<pre><code class="language-js">this.user</code></pre>
+<p>которое доступно нам благодаря тому, как упоминалось ранее, что мы вынесли модель данных <strong>User</strong> в общую примесь <strong>user</strong> в файле <strong>App.js</strong>.</p>
+<p>Каждая кнопка выполняет определённое действие. Первая кнопка создаёт нового пользователя, вторая его удаляет, а третья обновляет о нём данные, вводимые в текстовые поля.</p>
+<p>При нажатии на кнопку, вызывается её обработчик события <strong>clickButton</strong>, в котором и происходит вызов соответствующей функции из модели данных <strong>User</strong>.</p>
+<p>Давайте создадим эти функции в нашей модели данных.</p>
+<p>Откройте файл <strong>User.js</strong> из папки <strong>models</strong> и добавьте в объект модели данных <strong>User</strong> три новых метода, сразу после метода получения списка пользователей <strong>getUsers</strong>:</p>
+<pre><code class="language-js">// создание нового пользователя
+createUser() {
+  fetch(&#39;https://rem-rest-api.herokuapp.com/api/users/&#39;, {
+    method: &#39;POST&#39;,
+    credentials: &#39;include&#39;,
+    body: JSON.stringify(this.current)
+  })
+  .then(response =&gt; this.trigger(&#39;home&#39;))
+}
+
+// удаление текущего пользователя
+deleteUser() {
+  fetch(&#39;https://rem-rest-api.herokuapp.com/api/users/&#39; + this.current.id, {
+    method: &#39;DELETE&#39;,
+    credentials: &#39;include&#39;
+  })
+  .then(response =&gt; this.trigger(&#39;home&#39;))
+}
+
+// обновление текущего пользователя
+updateUser() {
+  fetch(&#39;https://rem-rest-api.herokuapp.com/api/users/&#39; + this.current.id, {
+    method: &#39;PUT&#39;,
+    credentials: &#39;include&#39;,
+    body: JSON.stringify(this.current)
+  })
+  .then(response =&gt; this.trigger(&#39;home&#39;))
+}</code></pre>
+<p>Структура данных функций должна быть вам уже знакома, на примере функции получения списка пользователей <strong>getUsers</strong>, которую мы рассматривали в четвёртом уроке, когда создавали модуль хранения состояния. Стоит обратить внимание, что при вызове метода <strong>fetch</strong> в каждой функции, в объекте его параметров, который является вторым аргументом, мы указываем соответствующий метод <strong>HTTP</strong>:</p>
+<ul>
+<li><strong>POST</strong> - создание</li>
+<li><strong>DELETE</strong> - удаление</li>
+<li><strong>PUT</strong> - обновление</li>
+</ul>
+<p>Кроме этого, в методах создания (<strong>createUser</strong>) и обновления (<strong>updateUser</strong>), в объекте параметров <strong>fetch</strong>, мы также передаём данные о пользователе в свойстве <strong>body</strong>:</p>
+<pre><code class="language-js">body: JSON.stringify(this.current)</code></pre>
+<p>Предварительно преобразуя объект <strong>current</strong> нашей модели данных, который содержит данные о текущем пользователе, в строку <strong>JSON</strong>.</p>
+<p>Конечной точкой для метода <strong>createUser</strong>, как и для метода <strong>getUsers</strong>, является <strong>users</strong>:</p>
+<pre><code class="language-js">&#39;https://rem-rest-api.herokuapp.com/api/users/&#39;</code></pre>
+<p>А вот для методов <strong>deleteUser</strong> и <strong>updateUser</strong>, к этой конечной точке добавляется <strong>id</strong> текущего пользователя из объекта <strong>current</strong> нашей модели данных:</p>
+<pre><code class="language-js">&#39;https://rem-rest-api.herokuapp.com/api/users/&#39; + this.current.id</code></pre>
+<p>В отличие от метода <strong>getUsers</strong>, все три новых метода не присваивают никаких данных свойствам модели. После успешного завершения своих запросов, они вызывают событие <strong>home</strong>:</p>
+<pre><code class="language-js">.then(response =&gt; this.trigger(&#39;home&#39;))</code></pre>
+<p>вместо события <strong>updated</strong>, которое вызывается в методе <strong>getUsers</strong>.</p>
+<p>Давайте рассмотрим обработчик события <strong>home</strong>, в нашем компоненте <strong>UserForm</strong>:</p>
+<pre><code class="language-js">// переходим на страницу list (список пользователей)
+// при получении события home от модели данных
+this.user.one(&#39;home&#39;, () =&gt; this.route(&#39;list&#39;))</code></pre>
+<p>Из комментария понятно основное его предназначение. После того, как методы модели данных успешно выполнили возложенные на них действия, они вызывают этот обработчик, который, в свою очередь, просто перенаправляет наше приложение на страницу списка пользователей.</p>
+<p>Мы ещё не создавали маршрутизацию, мы это сделаем в следующем и последнем уроке этого руководства.</p>
+<p>Но обратите внимание на:</p>
+<pre><code class="language-js">this.route(&#39;list&#39;))</code></pre>
+<p>Свойство <strong>route</strong> компонента <strong>UserForm</strong> является ссылкой на маршрутизатор, который мы передадим в общую примесь <strong>route</strong> в файле <strong>App.js</strong>. Точно так же, как перед этим мы передавали конструктор модели данных <strong>User</strong>.</p>
+<blockquote>
+<p>Как мы помним, наша модель данных <strong>User</strong> является наблюдаемой и доступна благодаря примесям во всех компонентах нашего приложения.</p>
+</blockquote>
+<p>Давайте сделаем это сейчас. И начнём мы с подключения маршрутизатора, который в <strong>Riot.js</strong> называется <strong>riot-route</strong>.</p>
+<p>Откройте файл <strong>App.js</strong> и в самом верху, после подключения <strong>Riot.js</strong>, добавьте подключение маршрутизатора:</p>
+<pre><code class="language-js">// подключаем Riot.js
+import riot from &#39;riot&#39;
+
+// подключаем Маршрутизатор
+import route from &#39;../node_modules/riot-route/dist/amd.route+tag.min&#39;</code></pre>
+<blockquote>
+<p>Мы будем использовать маршрутизацию на основе тегов. Данный тип маршрутизатора распологается в папке <strong>dist</strong>,  каталога основного маршрутизатора <strong>riot-route</strong>.</p>
+</blockquote>
+<p>Теперь добавим этот маршрутизатор в общую примесь <strong>route</strong>, там, где мы создавали примесь <strong>user</strong>, которой передавали конструктор модели данных <strong>User</strong>:</p>
+<pre><code class="language-js">// создаём общую примесь user и передаём в конструктор модели данных User
+// ссылку на библиотеку Riot.js, в виде аргумента riot
+// вторым свойством в объекте примесей создаём ещё одну примесь,
+// которая называется route и ссылается на подключенный выше маршрутизатор
+riot.mixin({ user: new User(riot), route: route })</code></pre>
+<p>Вернёмся к нашему компоненту <strong>UserForm</strong> и рассмотрим следующий обработчик:</p>
+<pre><code class="language-js">// обработчик события маршрутизатора
+this.on(&#39;route&#39;, (id) =&gt; this.user.getUser(id))</code></pre>
+<p>Всем компонентам, которые используются в маршрутизации, доступно событие <strong>route</strong>, которое выполняется при переходе к этому компоненту по ссылке, либо при нажатии кнопок <strong>назад</strong> и <strong>вперёд</strong> в браузере. У нас таких компонентов всего два, это <strong>UserList</strong> и <strong>UserForm</strong>, который мы сейчас и изучаем.</p>
+<p>Мы пока не создавали маршрутизацию в нашем приложении, но пример того, как она будет выглядеть, мы рассмотрим сейчас:</p>
+<pre><code class="language-html">&lt;main data-is=&quot;router&quot;&gt;
+  &lt;route path=&quot;list&quot;&gt;&lt;r-list /&gt;&lt;/route&gt;
+  &lt;route path=&quot;edit/*&quot;&gt;&lt;r-form /&gt;&lt;/route&gt;
+&lt;/main&gt;</code></pre>
+<p>Мы используем маршрутизацию на основе тегов, и в качестве самого маршрутизатора у нас выступает html-элемент <strong>main</strong>. Он имеет два маршрута:</p>
+<pre><code class="language-html">&lt;route path=&quot;list&quot;&gt;&lt;r-list /&gt;&lt;/route&gt;
+&lt;route path=&quot;edit/*&quot;&gt;&lt;r-form /&gt;&lt;/route&gt;</code></pre>
+<p>Маршрут <code>list</code> ссылается на компонент <strong>UserList</strong>, который представляет список пользователей. А маршрут <code>edit/*</code> будет ссылаться и загружать компонент <strong>UserForm</strong>, который будет содержать данные того пользователя, на котором мы кликнули в списке пользователей. Звёздочка в этом маршруте является подстановочным символом и соответствует регулярному выражению:</p>
+<pre><code>([^/?#]+?)</code></pre><p>Теперь ещё раз рассмотрим обработчик маршрутизатора:</p>
+<pre><code class="language-js">this.on(&#39;route&#39;, (id) =&gt; this.user.getUser(id))</code></pre>
+<p>Как только мы кликнули по какому-то пользователю из списка компонента <strong>UserList</strong>, то сразу загружается компонент <strong>UserForm</strong> с данными этого пользователя и выполняется обработчик маршрутизатора. Параметр <strong>id</strong> в этом обработчике ссылается на подстановочный символ звёздочки в маршруте <code>edit/*</code>, и представляет собой <strong>id</strong> пользователя из компонента <strong>UserList</strong>:</p>
+<pre><code class="language-html"> &lt;!-- добавляем ссылки на пользователей --&gt;
+&lt;a href=&quot;#!/edit/{ id }&quot;</code></pre>
+<p>И если мы посмотрим в адресную строку браузера после щелчка мышкой на каком-либо пользователе из списка, ты мы можем увидеть:</p>
+<pre><code>#!/edit/1
+#!/edit/2
+или
+#!/edit/37</code></pre><p>Вид зависит от <strong>id</strong> текущего пользователя, по которому мы кликнули.</p>
+<p>Обработчик маршрутизатора вызывает метод <strong>getUser</strong> нашей модели данных <strong>User</strong> и передаёт ему <strong>id</strong> текущего пользователя:</p>
+<pre><code class="language-js">this.user.getUser(id))</code></pre>
+<p>Метод <strong>getUser</strong> возвращает данные конкретного пользователя, которые отображаются в нашем компоненте <strong>UserForm</strong> и, которые, мы можем изменять, удалять или вводить в поля ввода новые данные и создавать на основе этих данных новых пользователей.</p>
+<p>Мы ещё не создавали этот метод, поэтому добавим его сейчас.</p>
+<p>Откройте файл <strong>User.js</strong> и добавьте метод <strong>getUser</strong> в нашу модель данных:</p>
+<pre><code class="language-js">// получение конкретного пользователя
+getUser(id) {
+  fetch(&#39;https://rem-rest-api.herokuapp.com/api/users/&#39; + id, {
+    method: &#39;GET&#39;,
+    credentials: &#39;include&#39;
+  })
+    .then(response =&gt; response.json())
+    .then(result =&gt; {
+      this.current = result
+      this.trigger(&#39;updated&#39;)
+    })
+}</code></pre>
+<p>В этом методе мы получаем данные того пользователя, <strong>id</strong> которого мы ему передали в обработчике маршрутизатора. После получения данных от сервера, как и метод <strong>getUsers</strong>, данный метод преобразует полученный <strong>JSON</strong> в объект <strong>JavaScript</strong> и присваивает его объекту <strong>current</strong> нашей модели данных. После чего, он вызывает событие <strong>updated</strong> в нашем компоненте <strong>UserForm</strong>.</p>
+<p> Давайте рассмотрим обработчик этого события:</p>
+<pre><code class="language-js"> // запускаем событие обновления компонента (this.update)
+// при получении события updated от модели данных
+this.user.one(&#39;updated&#39;, this.update)</code></pre>
+<p>Данный обработчик просто запускает в принудительном порядке событие обновления компонента:</p>
+<pre><code class="language-js">// обработчик события обновления компонента
+this.on(&#39;update&#39;, () =&gt; {
+  this.firstName = this.user.current.firstName
+  this.lastName = this.user.current.lastName
+})</code></pre>
+<p>В событии обновления компонента, мы присваиваем свойствам <strong>firstName</strong> и <strong>lastName</strong> компонента <strong>UserForm</strong>, данные из объекта <strong>current</strong> нашей модели данных <strong>User</strong>. Как мы помним, в объект <strong>current</strong> их поместил метод <strong>getUser</strong>, который мы перед этим рассматривали.</p>
+<p>Свойства <strong>firstName</strong> и <strong>lastName</strong> выводят свои значения в поля ввода, в шаблоне нашего компонента <strong>UserForm</strong>:</p>
+<p>свойство <strong>{ firstName }</strong></p>
+<pre><code class="language-html">&lt;input type=&quot;text&quot; class=&quot;form__input&quot; oninput={ inputValue } data-name=&quot;firstName&quot; placeholder=&quot;First name&quot; value=&quot;{ firstName }&quot;&gt;</code></pre>
+<p>и свойство <strong>{ lastName }</strong></p>
+<pre><code class="language-html">&lt;input type=&quot;text&quot; class=&quot;form__input&quot; oninput={ inputValue } data-name=&quot;lastName&quot; placeholder=&quot;Last name&quot; value=&quot;{ lastName }&quot;&gt;</code></pre>
+<p>Мы рассмотрели самый сложный компонент нашего приложения. В последнем уроке мы добавим маршрутизацию и подведём краткий итог проделанной нами работы.</p>
+<h3 id="add-routing">Добавляем маршрутизацию</h3>
+
+<p>Это заключительный урок по созданию простого приложения в <strong>Riot.js</strong>. В нём мы добавим маршрутизацию к нашему приложению и подведём краткий итог проделанной нами работы.</p>
+<p>На прошлом уроке, мы уже немного коснулись темы маршрутизации и даже подключили маршрутизатор в файле <strong>App.js</strong>:</p>
+<pre><code class="language-js">// подключаем Маршрутизатор
+import route from &#39;../node_modules/riot-route/dist/amd.route+tag.min&#39;</code></pre>
+<p>Напомню лишь, что мы будем использовать маршрутизацию на основе тегов.</p>
+<p>Откройте файл главного компонента нашего приложения <strong>App.tag</strong>.</p>
+<p>Вот так он выглядит у нас сейчас:</p>
+<pre><code class="language-html">&lt;app&gt;
+
+  &lt;!--  подключаем компонент Header  --&gt;
+  &lt;header data-is=&quot;r-header&quot; /&gt;
+
+  &lt;!--  подключаем компонент UserList  --&gt;
+  &lt;r-list /&gt;
+
+  &lt;!--  подключаем компонент Footer  --&gt;
+  &lt;footer data-is=&quot;r-footer&quot; /&gt;
+
+  &lt;!-- добавляем стили --&gt;
+  &lt;style type=&quot;plain&quot;&gt;
+    :scope {
+      display: flex;
+      flex-direction: column;
+      font: normal 16px Verdana;
+    }
+  &lt;/style&gt;
+
+&lt;/app&gt;</code></pre>
+<p>Мы оставим в нём всё как есть, кроме добавления стилей для элемента маршрутизации и секции подключения компонента <strong>UserList</strong>:</p>
+<pre><code class="language-html">&lt;!--  подключаем компонент UserList  --&gt;
+&lt;r-list /&gt;</code></pre>
+<p>Удалите эту секцию и на её месте добавьте:</p>
+<pre><code class="language-html">&lt;!--  подключаем маршрутизатор в тег main  --&gt;
+&lt;main data-is=&quot;router&quot;&gt;
+  &lt;route path=&quot;list&quot;&gt;&lt;r-list /&gt;&lt;/route&gt;
+  &lt;route path=&quot;edit/*&quot;&gt;&lt;r-form /&gt;&lt;/route&gt;
+&lt;/main&gt;</code></pre>
+<p>Теперь добавим немного стилей для элемента маршрутизации <strong>main</strong>:</p>
+<pre><code class="language-html">&lt;!-- добавляем стили --&gt;
+&lt;style type=&quot;plain&quot;&gt;
+  :scope {
+    display: flex;
+    flex-direction: column;
+    font: normal 16px Verdana;
+  }
+  /* стили для элемента маршрутизатора */
+  main {
+    margin-bottom: 20px;
+    padding: 0 15px;
+  }
+&lt;/style&gt;</code></pre>
+<p>Итоговый вид нашего файла <strong>App.tag</strong>:</p>
+<pre><code class="language-html">&lt;app&gt;
+
+  &lt;!--  подключаем компонент Header  --&gt;
+  &lt;header data-is=&quot;r-header&quot; /&gt;
+
+  &lt;!--  подключаем маршрутизатор в тег main  --&gt;
+  &lt;main data-is=&quot;router&quot;&gt;
+    &lt;route path=&quot;list&quot;&gt;&lt;r-list /&gt;&lt;/route&gt;
+    &lt;route path=&quot;edit/*&quot;&gt;&lt;r-form /&gt;&lt;/route&gt;
+  &lt;/main&gt;
+
+  &lt;!--  подключаем компонент Footer  --&gt;
+  &lt;footer data-is=&quot;r-footer&quot; /&gt;
+
+  &lt;!-- добавляем стили --&gt;
+  &lt;style type=&quot;plain&quot;&gt;
+    :scope {
+      display: flex;
+      flex-direction: column;
+      font: normal 16px Verdana;
+    }
+    /* стили для элемента маршрутизатора */
+    main {
+      margin-bottom: 20px;
+      padding: 0 15px;
+    }
+  &lt;/style&gt;
+
+&lt;/app&gt;</code></pre>
+<p>Разберём, что мы изменили подробнее. Во-первых, мы удалили компонент <strong>UserList</strong> и вместо него, мы создали html-элемент <strong>main</strong> и добавили в него маршрутизатор с помощью атрибута <strong>data-is</strong> со значением <strong>router</strong>:</p>
+<pre><code class="language-html">&lt;main data-is=&quot;router&quot;&gt;</code></pre>
+<p>Html-элемент <strong>main</strong> используется для основного содержимого страницы в <strong>HTML5</strong>. Во-вторых, мы сделали его маршрутизатором нашего приложения. Мы могли бы добавить маршрутизатор и так:</p>
+<pre><code class="language-html">&lt;router&gt;
+  &lt;route path=&quot;list&quot;&gt;&lt;r-list /&gt;&lt;/route&gt;
+  &lt;route path=&quot;edit/*&quot;&gt;&lt;r-form /&gt;&lt;/route&gt;
+&lt;/router&gt;</code></pre>
+<p>Но мы хотели бы следовать семантике и поэтому, было решено использовать стандартный html-элемент <strong>main</strong> из <strong>HTML5</strong>.</p>
+<p>Наш маршрутизатор содержит два тега маршрута <strong>route</strong>:</p>
+<pre><code class="language-html">&lt;route path=&quot;list&quot;&gt;&lt;r-list /&gt;&lt;/route&gt;
+&lt;route path=&quot;edit/*&quot;&gt;&lt;r-form /&gt;&lt;/route&gt;</code></pre>
+<p>Каждый из этих тегов имеет атрибут <strong>path</strong>, в котором содержится путь данного маршрута. Кроме этого, между открывающим и закрывающим тегами <strong>route</strong>, содержится подключение определённого компонента.</p>
+<p>Для маршрута <code>list</code> будет подключаться компонент <strong>UserList</strong>:</p>
+<pre><code class="language-html">&lt;route path=&quot;list&quot;&gt;&lt;r-list /&gt;&lt;/route&gt;</code></pre>
+<p>а для маршрута <code>edit/*</code>, компонент <strong>UserForm</strong>:</p>
+<pre><code class="language-html">&lt;route path=&quot;edit/*&quot;&gt;&lt;r-form /&gt;&lt;/route&gt;</code></pre>
+<p>Напомню, что звёздочка в маршруте является подстановочным символом и соответствует регулярному выражению:</p>
+<pre><code>([^/?#]+?)</code></pre><p>т.е. может соответствовать только букве, цифре или нижнему подчёркиванию.</p>
+<p>Если мы сейчас запустим наше приложение:</p>
+<pre><code>npm run dev</code></pre><p>то не увидим никакого списка на странице. Это связано с тем, что мы задали для нашего списка маршрут <code>list</code>.</p>
+<p>Давайте сделаем его маршрутом по умолчанию, чтобы при открытии приложения, его автоматически перекидывало на этот маршрут. Ко всему прочему, мы добавим <strong>#!</strong> (hashbang) в качестве базовой части <strong>url</strong>. По умолчанию, базовым значением является <strong>#*<em>. Можно было бы оставить и так, но в *</em>SPA</strong> принято использовать <strong>hashbang</strong>.</p>
+<p>Откройте файл <strong>App.js</strong> и добавьте в его конце:</p>
+<pre><code class="language-js">// задаём hashbang в качестве базовой части url
+route.base(&#39;#!/&#39;)
+
+// задаём маршрут list в качестве маршрута по умолчанию
+// с которого начинается открытие приложения
+route(&#39;list&#39;)</code></pre>
+<p>Итоговый вид файла <strong>App.js</strong>:</p>
+<pre><code class="language-js">// подключаем Riot.js
+import riot from &#39;riot&#39;
+
+// подключаем Маршрутизатор
+import route from &#39;../node_modules/riot-route/dist/amd.route+tag.min&#39;
+
+// подключаем модель данных User
+import User from &#39;./models/User&#39;
+
+// подключаем компонент UserList
+import &#39;./views/UserList.tag&#39;
+
+// подключаем компонент App
+import &#39;./views/App.tag&#39;
+
+// подключаем компонент Menu
+import &#39;./views/Menu.tag&#39;
+
+// подключаем компонент Header
+import &#39;./views/Header.tag&#39;
+
+// подключаем компонент Footer
+import &#39;./views/Footer.tag&#39;
+
+// подключаем компонент UserForm
+import &#39;./views/UserForm.tag&#39;
+
+// подключаем внешние стили
+import &#39;./sass/styles.scss&#39;
+
+// создаём общую примесь user и передаём в конструктор модели данных User
+// ссылку на библиотеку Riot.js, в виде аргумента riot
+// вторым свойством в объекте примесей создаём ещё одну примесь,
+// которая называется route и ссылается на подключенный выше маршрутизатор
+riot.mixin({ user: new User(riot), route: route })
+
+// монтируем компонент App
+riot.mount(&#39;app&#39;)
+
+// задаём hashbang в качестве базовой части url
+route.base(&#39;#!/&#39;)
+
+// задаём маршрут list в качестве маршрута по умолчанию
+// с которого начинается открытие приложения
+route(&#39;list&#39;)</code></pre>
+<p>Теперь, наше приложение при открытии будет автоматически перенаправлено по маршруту <code>list</code>, по которому, как мы помним, будет загружаться компонент <strong>UserList</strong>, который представляет список из 10 пользователей. Давайте увеличим их количесто до 100.</p>
+<p>Откройте файл <strong>User.js</strong>, который представляет модуль нашей модели данных, и в его методе <strong>getUsers</strong> добавьте параметр <strong>limit</strong> со значением <strong>100</strong> в адрес запроса метода <strong>fetch</strong>:</p>
+<pre><code class="language-js">fetch(&#39;https://rem-rest-api.herokuapp.com/api/users?limit=100&#39;</code></pre>
+<p>т.е. мы добавили к запросу строку:</p>
+<pre><code>?limit=100</code></pre><p>Метод <strong>getUsers</strong> должен теперь выглядеть так:</p>
+<pre><code class="language-js">// получаем список пользователей с сервера
+getUsers() {
+  fetch(&#39;https://rem-rest-api.herokuapp.com/api/users?limit=100&#39;, {
+    method: &#39;GET&#39;,
+    credentials: &#39;include&#39;
+  })
+    .then(response =&gt; response.json())
+    .then(result =&gt; {
+      // присваиваем результат ответа сервера свойству list модели данных
+      this.list = result.data
+      // запускаем событие updated, после успешного получения данных от сервера
+      this.trigger(&#39;updated&#39;)
+    })
+}</code></pre>
+<blockquote>
+<p>На самом деле, пользователей в базе всего 25. Может быть со временем это количество будет увеличено, поэтому мы взяли с запасом.</p>
+</blockquote>
+<p>Мы можем снова запустить наше приложение и оно откроется по маршруту <code>list</code>, со списком из 25 пользователей. Можно щелкнуть по любому пользователю и тогда, мы перейдём на страницу редактирования этого пользователя, которую представляет компонент <strong>UserForm</strong> по маршруту <code>edit/*</code>.</p>
+<p>Поредактируйте данные пользователей и поиграйте с кнопками на этой странице. После нажатия на любую кнопку, приложение будет перенаправлено по маршруту <code>list</code>, обратно к списку пользователей, как мы помним из прошлого урока:</p>
+<pre><code class="language-js">// переходим на страницу list (список пользователей)
+// при получении события home от модели данных
+this.user.one(&#39;home&#39;, () =&gt; this.route(&#39;list&#39;))</code></pre>
+<p>Где вы сможете увидеть сделанные вами изменения.</p>
+<blockquote>
+<p>Все сделанные вами изменения, никак не влияют на базу данных расположенную на сервере. Они сохраняются в куках на вашем копьютере и теряются после закрытия браузера.</p>
+</blockquote>
+<p>Нам осталось запустить <strong>Webpack</strong> в режиме продакшена:</p>
+<pre><code>npm run build</code></pre><p>После этого, мы можем передать файл <strong>index.html</strong> и папку <strong>dist</strong>, нашему заказчику приложения.</p>
+<p><strong>На этом всё!</strong></p>
+<p><em>Мы проделали большой путь, чтобы создать это простое приложение. Но зато, мы прошли весь основной процесс создания приложений в *</em>Riot.js<strong>. Захватили многие моменты связанные с **Webpack</strong> и его модулями. Надеюсь, что вам понравилось данное руководство и что всё у вас получилось! <strong>Удачи!*</strong></p>
