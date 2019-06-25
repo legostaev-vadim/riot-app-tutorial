@@ -1,8 +1,8 @@
 ## Простое приложение на Riot.js
 
-![Riot](https://riot.js.org/img/logo/riot120x.png)
+![Riot](https://raw.githubusercontent.com/legostaev-vadim/riot-app/master/riot120x.png)
 
-Онлайн пример приложения [Riot Application](http://272758.playcode.io/#!/list)
+Онлайн пример приложения [Riot Application](http://353492.playcode.io/#!/list)
 
 [Исходный код](https://github.com/legostaev-vadim/riot-app-tutorial)
 
